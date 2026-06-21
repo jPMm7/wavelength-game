@@ -55,7 +55,7 @@ export function HeroDial() {
   const RADIUS = 180;
   
   return (
-    <div className="relative w-full max-w-sm mx-auto flex justify-center items-end drop-shadow-[0px_8px_0px_#010f2c]">
+    <div className="relative w-full mx-auto flex justify-center items-end drop-shadow-[0px_8px_0px_#010f2c]">
       <motion.svg 
         viewBox="-10 -10 420 250" 
         className="w-full h-auto drop-shadow-2xl"
@@ -86,7 +86,7 @@ export function HeroDial() {
           {/* Pointer line */}
           <line x1="200" y1="200" x2="200" y2="40" stroke="#010f2c" strokeWidth="8" strokeLinecap="round" />
           {/* Pointer needle tip */}
-          <circle cx="200" cy="40" r="6" fill="#ef4444" />
+          <circle cx="200" cy="40" r="6" fill="#ffffff" />
           {/* Pointer base pivot (Dark) */}
           <circle cx="200" cy="200" r="24" fill="#010f2c" />
           {/* Pointer base pivot (White/Cream center) */}
