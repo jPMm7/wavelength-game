@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-imperial_blue: #03256c;
+  --color-imperial_blue-100: #010716;
+  --color-imperial_blue-200: #010f2c;
+  --color-imperial_blue-300: #021642;
+  --color-imperial_blue-400: #021d58;
+  --color-imperial_blue-500: #03256c;
+  --color-imperial_blue-600: #053ebb;
+  --color-imperial_blue-700: #165ef9;
+  --color-imperial_blue-800: #6494fb;
+  --color-imperial_blue-900: #b1c9fd;
+
+  --color-bright_ocean: #1a8fe3;
+  --color-bright_ocean-100: #051d2e;
+  --color-bright_ocean-200: #0b3a5b;
+  --color-bright_ocean-300: #105789;
+  --color-bright_ocean-400: #1573b7;
+  --color-bright_ocean-500: #1a8fe3;
+  --color-bright_ocean-600: #48a6ea;
+  --color-bright_ocean-700: #76bdef;
+  --color-bright_ocean-800: #a4d3f4;
+  --color-bright_ocean-900: #d1e9fa;
+
+  --color-cream: #ebefbf;
+  --color-cream-100: #404511;
+  --color-cream-200: #818922;
+  --color-cream-300: #c0cc35;
+  --color-cream-400: #d5de79;
+  --color-cream-500: #ebefbf;
+  --color-cream-600: #eff2cb;
+  --color-cream-700: #f3f5d8;
+  --color-cream-800: #f7f8e5;
+  --color-cream-900: #fbfcf2;
+
+  --color-frosted_mint: #eaf7cf;
+  --color-frosted_mint-100: #384e0d;
+  --color-frosted_mint-200: #709b1a;
+  --color-frosted_mint-300: #a4dd34;
+  --color-frosted_mint-400: #c7ea81;
+  --color-frosted_mint-500: #eaf7cf;
+  --color-frosted_mint-600: #eef8d9;
+  --color-frosted_mint-700: #f2fae2;
+  --color-frosted_mint-800: #f6fcec;
+  --color-frosted_mint-900: #fbfdf5;
+
+  --color-background: var(--color-imperial_blue-500);
+  --color-foreground: #ffffff;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-imperial_blue-500);
+  color: #ffffff;
 }
