@@ -159,6 +159,14 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
           <span className={`font-black text-base ${myPlayerTeam?.color?.split(' ')[0].replace('bg-', 'text-') || 'text-bright_ocean-500'}`}>{myPlayerTeam?.name}</span>
         </div>
       </div>
+      <div className="flex justify-center">
+        <button 
+          onClick={onLeave}
+          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-red-400 transition-colors"
+        >
+          <ArrowLeft className="w-3 h-3" /> Leave Game
+        </button>
+      </div>
     </div>
   );
 

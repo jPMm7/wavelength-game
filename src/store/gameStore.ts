@@ -38,19 +38,21 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   syncTeams: (newTeams) => set((state) => {
-    const updatedTeams = [...state.teams];
-    let changed = false;
-    newTeams.forEach(nt => {
-      if (!updatedTeams.find(t => t.id === nt.id)) {
-        updatedTeams.push({
-          ...nt,
-          score: 0,
-          psychicIndex: 0
-        });
-        changed = true;
+    const updatedTeams = newTeams.map(nt => {
+      const existing = state.teams.find(t => t.id === nt.id);
+      if (existing) {
+        return { ...nt, score: existing.score, psychicIndex: existing.psychicIndex };
       }
+      return { ...nt, score: 0, psychicIndex: 0 };
     });
-    return changed ? { teams: updatedTeams } : {};
+    
+    // Also ensure currentTeamId is still valid
+    let newCurrentTeamId = state.currentTeamId;
+    if (!updatedTeams.find(t => t.id === newCurrentTeamId)) {
+      newCurrentTeamId = updatedTeams.length > 0 ? updatedTeams[0].id : null;
+    }
+
+    return { teams: updatedTeams, currentTeamId: newCurrentTeamId };
   }),
   
   startRound: () => {

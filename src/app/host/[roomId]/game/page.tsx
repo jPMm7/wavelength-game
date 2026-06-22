@@ -160,6 +160,23 @@ function HostGameContent() {
     }
   }, [store.phase, store.individualGuesses, store.teamGuesses, store.teams, store.currentTeamId, players, store]);
 
+  // Check for auto-win when players leave
+  useEffect(() => {
+    if (!isInitialized || store.phase === 'game_over') return;
+    
+    // Determine active teams
+    let activeTeams: any[] = [];
+    if (store.mode === 'solo') {
+      activeTeams = store.teams.filter(t => players.some(p => p.id === t.id));
+    } else {
+      activeTeams = store.teams.filter(t => players.some(p => p.teamId === t.id));
+    }
+    
+    if (activeTeams.length === 1) {
+       store.setGameOver(activeTeams[0].id);
+    }
+  }, [players, store.teams, store.mode, store.phase, isInitialized, store]);
+
 
   if (!isInitialized || !store.currentCard || !store.teams.length) {
     return <div className="min-h-screen bg-imperial_blue-500 flex items-center justify-center text-white text-2xl font-bold uppercase tracking-widest">Loading Engine...</div>;
@@ -500,6 +517,18 @@ function HostGameContent() {
                 className="w-full flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-400 text-white font-bold py-4 rounded-xl border-b-4 border-purple-700 active:border-b-0 active:translate-y-[4px] transition-all uppercase tracking-widest"
               >
                 <SkipForward className="w-5 h-5" /> Skip Turn
+              </button>
+
+              <button 
+                onClick={() => {
+                  const currentMode = store.mode;
+                  localStorage.removeItem(`wave_room_state_${roomId}`);
+                  store.resetGame();
+                  router.push(`/host/${roomId}?mode=${currentMode}`);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-bright_ocean-500 hover:bg-bright_ocean-400 text-white font-bold py-4 rounded-xl border-b-4 border-bright_ocean-700 active:border-b-0 active:translate-y-[4px] transition-all uppercase tracking-widest"
+              >
+                <RefreshCcw className="w-5 h-5" /> Return to Lobby
               </button>
               
               <div className="bg-imperial_blue-400 p-4 rounded-xl border-2 border-imperial_blue-300 space-y-4">
