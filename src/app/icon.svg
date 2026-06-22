@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <g transform="translate(256, 420)">
+    <!-- Outer Semicircle -->
+    <path d="M -250 0 A 250 250 0 0 1 250 0 Z" fill="#354968" />
+    
+    <!-- Red Wedge 1 -->
+    <path d="M 0 0 L -160.7 -191.5 A 250 250 0 0 1 -101.7 -228.4 Z" fill="#ff4d4d" />
+    
+    <!-- Orange Wedge 1 -->
+    <path d="M 0 0 L -101.7 -228.4 A 250 250 0 0 1 -34.8 -247.6 Z" fill="#ffb800" />
+    
+    <!-- Blue Wedge -->
+    <path d="M 0 0 L -34.8 -247.6 A 250 250 0 0 1 34.8 -247.6 Z" fill="#1fb0ff" />
+    
+    <!-- Orange Wedge 2 -->
+    <path d="M 0 0 L 34.8 -247.6 A 250 250 0 0 1 101.7 -228.4 Z" fill="#ffb800" />
+    
+    <!-- Red Wedge 2 -->
+    <path d="M 0 0 L 101.7 -228.4 A 250 250 0 0 1 160.7 -191.5 Z" fill="#ff4d4d" />
+    
+    <!-- Pointer Mechanism -->
+    <g transform="rotate(-6)">
+      <rect x="-7" y="-230" width="14" height="230" rx="7" fill="#091122" />
+      <circle cx="0" cy="-216" r="9" fill="#ffffff" />
+    </g>
+    
+    <!-- Base -->
+    <circle cx="0" cy="0" r="32" fill="#091122" />
+    <circle cx="0" cy="0" r="14" fill="#e8efcc" />
+  </g>
+</svg>
