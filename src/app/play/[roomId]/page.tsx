@@ -397,7 +397,7 @@ function PlayJoinContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const roomId = params.roomId as string;
-  const [mode, setMode] = useState<'team' | 'coop'>('team');
+  const [mode, setMode] = useState<'team' | 'coop' | 'solo'>('team');
 
   const [name, setName] = useState('');
   const [joinedState, setJoinedState] = useState<'unjoined' | 'coop' | string>('unjoined');
