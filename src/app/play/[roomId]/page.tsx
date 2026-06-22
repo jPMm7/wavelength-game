@@ -68,7 +68,7 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
   // Derive individual guesses array for the GameDial
   const myTeamIndividualGuesses = Object.values(masterState.individualGuesses || {})
     .filter((g: any) => myTeamPlayers.some((p:any) => p.id === g.id))
-    .filter((g: any, index, self) => self.findIndex(t => t.name === g.name) === index);
+    .filter((g: any, index, self) => self.findIndex((t: any) => t.name === g.name) === index);
 
   // Sync states
   useEffect(() => {
