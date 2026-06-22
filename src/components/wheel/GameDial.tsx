@@ -10,9 +10,10 @@ interface GameDialProps {
   interactive: boolean; // Whether the user can drag the needle
   onGuessChange?: (angle: number) => void; // Callback when needle moves
   individualGuesses?: { id: string; name: string; angle: number; color?: string }[];
+  hideMainPointer?: boolean;
 }
 
-export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, onGuessChange, individualGuesses }: GameDialProps) {
+export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, onGuessChange, individualGuesses, hideMainPointer }: GameDialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -141,7 +142,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
            const labelPos = polarToCartesian(CENTER, 200, RADIUS + 25, guess.angle);
            return (
              <g key={guess.id}>
-               <motion.g animate={{ rotate: guess.angle - 90 }} transition={{ type: "spring", bounce: 0.1, duration: 0.5 }} style={{ originX: 210/420, originY: 210/250 }}>
+               <motion.g animate={{ rotate: guess.angle - 90 }} transition={{ type: "spring", bounce: 0.1, duration: 0.5 }} style={{ originX: 0.5, originY: 1 }}>
                  <line x1="200" y1="200" x2="200" y2="40" stroke={guess.color || "#ffffff"} strokeWidth="6" strokeLinecap="round" className="opacity-50" />
                </motion.g>
                <motion.text 
@@ -161,20 +162,22 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
         })}
 
         {/* The Main Dial/Pointer */}
-        <motion.g
-          animate={{ rotate: guessAngle - 90 }}
-          transition={{ type: "spring", bounce: 0.1, duration: isDragging ? 0.05 : 0.5 }}
-          style={{ originX: 210/420, originY: 210/250 }}
-        >
-          {/* Pointer line */}
-          <line x1="200" y1="200" x2="200" y2="40" stroke="#010f2c" strokeWidth="10" strokeLinecap="round" />
-          {/* Pointer needle tip */}
-          <circle cx="200" cy="40" r="8" fill="#ffffff" className="drop-shadow-sm" />
-          {/* Pointer base pivot (Dark) */}
-          <circle cx="200" cy="200" r="32" fill="#010f2c" />
-          {/* Pointer base pivot (White/Cream center) */}
-          <circle cx="200" cy="200" r="16" fill="#ebefbf" />
-        </motion.g>
+        {!hideMainPointer && (
+          <motion.g
+            animate={{ rotate: guessAngle - 90 }}
+            transition={{ type: "spring", bounce: 0.1, duration: isDragging ? 0.05 : 0.5 }}
+            style={{ originX: 210/420, originY: 210/250 }}
+          >
+            {/* Pointer line */}
+            <line x1="200" y1="200" x2="200" y2="40" stroke="#010f2c" strokeWidth="10" strokeLinecap="round" />
+            {/* Pointer needle tip */}
+            <circle cx="200" cy="40" r="8" fill="#ffffff" className="drop-shadow-sm" />
+            {/* Pointer base pivot (Dark) */}
+            <circle cx="200" cy="200" r="32" fill="#010f2c" />
+            {/* Pointer base pivot (White/Cream center) */}
+            <circle cx="200" cy="200" r="16" fill="#ebefbf" />
+          </motion.g>
+        )}
       </svg>
 
       {/* Interactive Overlay Hint */}

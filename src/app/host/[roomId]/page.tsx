@@ -110,7 +110,7 @@ function HostLobbyContent() {
   const simulateJoin = () => {
     if (players.length >= 16) return;
     const randomName = MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
-    const randomTeam = teams.length > 0 ? teams[Math.floor(Math.random() * teams.length)].id : 'coop';
+    const randomTeam = mode === 'solo' ? 'solo' : (teams.length > 0 ? teams[Math.floor(Math.random() * teams.length)].id : 'coop');
     updatePlayers([...players, { id: Math.random().toString(), name: `${randomName} ${players.length + 1}`, teamId: randomTeam }]);
   };
 
@@ -270,6 +270,7 @@ function HostLobbyContent() {
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 bg-imperial_blue-800 rounded-full" />
                         <span className="truncate max-w-[150px]">{player.name}</span>
+                        {mode === 'coop' && player.teamId === 'coop' && <span className="text-xs bg-imperial_blue-800 text-white px-2 py-1 rounded-md">Coop</span>}
                       </div>
                       <button 
                         onClick={() => kickPlayer(player.id)}
@@ -289,8 +290,25 @@ function HostLobbyContent() {
             variant="accent" 
             size="xl" 
             className="w-full py-6 text-3xl"
-            disabled={players.length < 2}
-            onClick={() => router.push(`/host/${roomId}/game`)}
+            disabled={players.length < 2 || (mode === 'team' && teams.length === 0)}
+            onClick={() => {
+              if (mode === 'solo') {
+                const soloTeams = players.map((p, i) => ({
+                  id: p.id,
+                  name: p.name,
+                  color: [
+                    'bg-bright_ocean-500 border-bright_ocean-300',
+                    'bg-imperial_blue-500 border-imperial_blue-300',
+                    'bg-frosted_mint-500 border-frosted_mint-300',
+                    'bg-red-500 border-red-300',
+                    'bg-yellow-500 border-yellow-300',
+                    'bg-purple-500 border-purple-300'
+                  ][i % 6]
+                }));
+                localStorage.setItem(`wave_room_teams_${roomId}`, JSON.stringify(soloTeams));
+              }
+              router.push(`/host/${roomId}/game`);
+            }}
           >
             START GAME
             <Play className="w-8 h-8" />

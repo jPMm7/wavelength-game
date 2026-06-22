@@ -53,6 +53,7 @@ function HostGameContent() {
     if (!isInitialized) return;
     
     const masterState = {
+      mode: store.mode,
       phase: store.phase,
       teams: store.teams,
       currentTeamId: store.currentTeamId,
@@ -115,11 +116,18 @@ function HostGameContent() {
   useEffect(() => {
     if (store.phase === 'guess_blind') {
       const currentTeam = store.teams.find(t => t.id === store.currentTeamId);
-      const guessingPlayers = players.filter(p => p.teamId !== currentTeam?.id);
+      const guessingPlayers = store.mode === 'solo' 
+        ? players.filter(p => p.id !== currentTeam?.id)
+        : players.filter(p => p.teamId !== currentTeam?.id);
+      
       const numGuessers = Math.max(1, guessingPlayers.length);
       
       if (Object.keys(store.individualGuesses).length >= numGuessers) {
-        store.setGuessDebatePhase();
+        if (store.mode === 'solo') {
+          store.submitGuess(90); // Dummy guess to trigger reveal
+        } else {
+          store.setGuessDebatePhase();
+        }
       }
     }
   }, [store.phase, store.individualGuesses, store.teams, store.currentTeamId, players, store]);
@@ -130,7 +138,9 @@ function HostGameContent() {
   }
 
   const currentTeam = store.teams.find(t => t.id === store.currentTeamId);
-  const guessingPlayers = players.filter(p => p.teamId !== currentTeam?.id);
+  const guessingPlayers = store.mode === 'solo' 
+    ? players.filter(p => p.id !== currentTeam?.id)
+    : players.filter(p => p.teamId !== currentTeam?.id);
   const numGuessers = Math.max(1, guessingPlayers.length);
   const submittedCount = Object.keys(store.individualGuesses).length;
   const individualGuessesArray = Object.values(store.individualGuesses);
@@ -175,11 +185,19 @@ function HostGameContent() {
   };
 
   const handleNextRound = () => {
-    const points = calculatePoints(store.targetAngle, store.guessAngle);
-    store.addScore(store.currentTeamId!, points);
+    let highestScoreTeamId: string | null = null;
+    let maxScore = -1;
+
+    // Find the winner
+    store.teams.forEach(t => {
+      if (t.score >= store.targetScore && t.score > maxScore) {
+        highestScoreTeamId = t.id;
+        maxScore = t.score;
+      }
+    });
     
-    if ((currentTeam?.score || 0) + points >= store.targetScore) {
-      store.setGameOver(store.currentTeamId!);
+    if (highestScoreTeamId) {
+      store.setGameOver(highestScoreTeamId);
       return;
     }
     
@@ -325,11 +343,24 @@ function HostGameContent() {
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
               <div className="mb-4 md:mb-6 flex justify-center shrink-0">
-                <div className={`px-6 py-2 md:px-8 md:py-3 rounded-2xl border-4 shadow-[0_4px_0_0_#010f2c] ${calculatePoints(store.targetAngle, store.guessAngle) > 0 ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-red-500 border-red-300'}`}>
-                  <h2 className="text-2xl md:text-4xl font-black text-imperial_blue-800 uppercase tracking-widest text-center drop-shadow-sm">
-                    +{calculatePoints(store.targetAngle, store.guessAngle)} Points!
-                  </h2>
-                </div>
+                {store.mode === 'solo' ? (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {individualGuessesArray.map(guess => {
+                      const pts = calculatePoints(store.targetAngle, guess.angle);
+                      return pts > 0 ? (
+                        <div key={guess.id} className="px-4 py-2 bg-frosted_mint-500 border-2 border-frosted_mint-300 rounded-xl shadow-[0_2px_0_0_#010f2c]">
+                          <span className="font-bold text-imperial_blue-800 uppercase">{guess.name}: +{pts}</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                ) : (
+                  <div className={`px-6 py-2 md:px-8 md:py-3 rounded-2xl border-4 shadow-[0_4px_0_0_#010f2c] ${calculatePoints(store.targetAngle, store.guessAngle) > 0 ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-red-500 border-red-300'}`}>
+                    <h2 className="text-2xl md:text-4xl font-black text-imperial_blue-800 uppercase tracking-widest text-center drop-shadow-sm">
+                      +{calculatePoints(store.targetAngle, store.guessAngle)} Points!
+                    </h2>
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-h-0 flex items-center justify-center">
                 <GameDial 
@@ -337,6 +368,8 @@ function HostGameContent() {
                   guessAngle={store.guessAngle} 
                   shutterOpen={true} 
                   interactive={false} 
+                  individualGuesses={store.mode === 'solo' ? individualGuessesArray : undefined}
+                  hideMainPointer={store.mode === 'solo'}
                 />
               </div>
             </div>
@@ -465,31 +498,46 @@ function HostGameContent() {
             <section className="space-y-4">
               <h3 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest">Player Moderation</h3>
               <div className="space-y-4">
-                {store.teams.map(team => {
-                  const teamPlayers = players.filter(p => p.teamId === team.id);
-                  return (
-                    <div key={team.id} className="space-y-2">
-                      <h4 className="text-xs font-bold text-cream-500 uppercase tracking-widest border-b-2 border-imperial_blue-300 pb-1">{team.name}</h4>
-                      {teamPlayers.length === 0 ? (
-                        <p className="text-white/30 text-xs lg:text-sm italic">No players</p>
-                      ) : (
-                        teamPlayers.map(p => (
-                          <div key={p.id} className="flex items-center justify-between bg-imperial_blue-400 px-3 py-2 rounded-lg">
-                            <span className="text-white font-bold text-xs lg:text-sm truncate flex-1">{p.name}</span>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => handleMakeLeader(team.id, p.id)} className={`p-1.5 rounded-md transition-colors ${(team.psychicIndex || 0) % Math.max(1, teamPlayers.length) === teamPlayers.findIndex(tp => tp.id === p.id) ? 'text-bright_ocean-500 bg-bright_ocean-500/10' : 'text-white/30 hover:text-bright_ocean-400 hover:bg-bright_ocean-500/10'}`} title="Make Leader (Psychic / Captain)">
-                                <Crown className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleKickPlayer(p.id)} className="text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 p-1.5 rounded-md transition-colors" title="Kick Player">
-                                <X className="w-4 h-4" />
-                              </button>
+                {store.mode === 'solo' ? (
+                  <div className="space-y-2">
+                    {players.map(p => (
+                      <div key={p.id} className="flex items-center justify-between bg-imperial_blue-400 px-3 py-2 rounded-lg border border-imperial_blue-300">
+                        <span className="text-white font-bold text-xs lg:text-sm truncate flex-1">{p.name}</span>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleKickPlayer(p.id)} className="text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 p-1.5 rounded-md transition-colors" title="Kick Player">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  store.teams.map(team => {
+                    const teamPlayers = players.filter(p => p.teamId === team.id);
+                    return (
+                      <div key={team.id} className="space-y-2">
+                        <h4 className="text-xs font-bold text-cream-500 uppercase tracking-widest border-b-2 border-imperial_blue-300 pb-1">{team.name}</h4>
+                        {teamPlayers.length === 0 ? (
+                          <p className="text-white/30 text-xs lg:text-sm italic">No players</p>
+                        ) : (
+                          teamPlayers.map(p => (
+                            <div key={p.id} className="flex items-center justify-between bg-imperial_blue-400 px-3 py-2 rounded-lg">
+                              <span className="text-white font-bold text-xs lg:text-sm truncate flex-1">{p.name}</span>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => handleMakeLeader(team.id, p.id)} className={`p-1.5 rounded-md transition-colors ${(team.psychicIndex || 0) % Math.max(1, teamPlayers.length) === teamPlayers.findIndex(tp => tp.id === p.id) ? 'text-bright_ocean-500 bg-bright_ocean-500/10' : 'text-white/30 hover:text-bright_ocean-400 hover:bg-bright_ocean-500/10'}`} title="Make Leader (Psychic / Captain)">
+                                  <Crown className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleKickPlayer(p.id)} className="text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 p-1.5 rounded-md transition-colors" title="Kick Player">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  );
-                })}
+                          ))
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </section>
 
@@ -511,6 +559,9 @@ function HostGameContent() {
             </Button>
             <Button variant="accent" size="lg" className="flex-1 !bg-red-500 hover:!bg-red-400 !border-red-300 !text-white" onClick={() => {
               localStorage.removeItem(`wave_room_state_${roomId}`);
+              localStorage.removeItem(`wave_room_teams_${roomId}`);
+              localStorage.removeItem(`wave_room_${roomId}`);
+              localStorage.removeItem(`wave_room_config_${roomId}`);
               router.push('/');
             }}>
               End Game

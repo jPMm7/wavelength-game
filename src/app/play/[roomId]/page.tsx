@@ -22,25 +22,37 @@ const TEAM_COLORS = [
 ];
 
 function PlayerGameController({ roomId, myId, myTeamId, masterState, players, onLeave }: { roomId: string, myId: string, myTeamId: string, masterState: any, players: any[], onLeave: () => void }) {
-  const isMyTeam = myTeamId === masterState.currentTeamId;
+  const isMyTeam = masterState.mode === 'solo' 
+    ? myId === masterState.currentTeamId
+    : myTeamId === masterState.currentTeamId;
   const currentTeam = masterState.teams.find((t:any) => t.id === masterState.currentTeamId);
-  const teamPlayers = players.filter((p:any) => p.teamId === currentTeam?.id);
+  const teamPlayers = masterState.mode === 'solo'
+    ? players.filter((p:any) => p.id === currentTeam?.id)
+    : players.filter((p:any) => p.teamId === currentTeam?.id);
   const myIndexInTeam = teamPlayers.findIndex((p:any) => p.id === myId);
   const myPlayer = players.find((p:any) => p.id === myId);
-  const myPlayerTeam = masterState.teams.find((t:any) => t.id === myTeamId);
+  const myPlayerTeam = masterState.mode === 'solo' 
+    ? masterState.teams.find((t:any) => t.id === myId)
+    : masterState.teams.find((t:any) => t.id === myTeamId);
   
   // Predictably determine who the psychic is based on the index
-  const isPsychic = isMyTeam && teamPlayers.length > 0 && 
-    ((currentTeam?.psychicIndex || 0) % teamPlayers.length) === myIndexInTeam;
+  const isPsychic = masterState.mode === 'solo'
+    ? isMyTeam
+    : isMyTeam && teamPlayers.length > 0 && 
+      ((currentTeam?.psychicIndex || 0) % teamPlayers.length) === myIndexInTeam;
 
   // The Guessers are now everyone NOT on the current team (the opposing team)
   const isGuesser = !isMyTeam;
-  const guessingPlayers = players.filter((p:any) => p.teamId !== currentTeam?.id);
+  const guessingPlayers = masterState.mode === 'solo'
+    ? players.filter((p:any) => p.id !== currentTeam?.id)
+    : players.filter((p:any) => p.teamId !== currentTeam?.id);
   const myIndexInGuessers = guessingPlayers.findIndex((p:any) => p.id === myId);
 
   // The Captain is mathematically chosen from the guessing players
-  const isCaptain = isGuesser && guessingPlayers.length > 0 &&
-    (guessingPlayers.length === 1 ? true : ((currentTeam?.psychicIndex || 0) % guessingPlayers.length) === myIndexInGuessers);
+  const isCaptain = masterState.mode === 'solo'
+    ? false
+    : isGuesser && guessingPlayers.length > 0 &&
+      (guessingPlayers.length === 1 ? true : ((currentTeam?.psychicIndex || 0) % guessingPlayers.length) === myIndexInGuessers);
 
   const [clueInput, setClueInput] = useState('');
   const [localTarget, setLocalTarget] = useState(90);
@@ -283,12 +295,25 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
     }
 
     if (masterState.phase === 'reveal') {
+      const myGuess = masterState.individualGuesses[myId];
+      let myPoints = 0;
+      if (myGuess) {
+        const diff = Math.abs(masterState.targetAngle - myGuess.angle);
+        if (diff <= 5) myPoints = 4;
+        else if (diff <= 15) myPoints = 3;
+        else if (diff <= 25) myPoints = 2;
+      }
+
       return (
         <div className="flex-1 flex items-center justify-center">
           <div className="bg-white p-8 rounded-3xl border-8 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
-            <CheckCircle2 className="w-20 h-20 text-frosted_mint-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-imperial_blue-800 uppercase tracking-widest mb-2">Results In!</h2>
-            <p className="text-imperial_blue-500 font-bold text-xl">Check the Big Screen to see how many points were scored!</p>
+            <h2 className="text-3xl font-black text-imperial_blue-800 uppercase tracking-widest mb-4">Reveal Phase</h2>
+            <p className="text-xl font-bold text-imperial_blue-500">Look at the TV for the results!</p>
+            {masterState.mode === 'solo' && isGuesser && myGuess && (
+               <div className={`mt-6 p-4 rounded-xl border-4 font-bold text-2xl uppercase tracking-widest ${myPoints > 0 ? 'bg-frosted_mint-100 border-frosted_mint-500 text-frosted_mint-800' : 'bg-red-100 border-red-500 text-red-800'}`}>
+                 You scored: +{myPoints}
+               </div>
+            )}
           </div>
         </div>
       );
@@ -450,9 +475,9 @@ function PlayJoinContent() {
   // Lobby waiting state
   if (joinedState !== 'unjoined') {
     const joinedTeam = teams.find(t => t.id === joinedState);
-    const teamName = mode === 'coop' ? 'The Collective' : (joinedTeam?.name || 'A Team');
+    const teamName = mode === 'coop' ? 'The Collective' : (mode === 'solo' ? 'Free-for-All' : (joinedTeam?.name || 'A Team'));
     
-    const teamPlayers = players.filter((p: any) => p.teamId === joinedState);
+    const teamPlayers = mode === 'solo' ? players : players.filter((p: any) => p.teamId === joinedState);
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-imperial_blue-500 to-imperial_blue-600">
@@ -554,8 +579,8 @@ function PlayJoinContent() {
 
           <div className="space-y-4">
             <label className="text-white font-bold uppercase tracking-widest text-sm flex items-center gap-2">
-              <Users className="w-4 h-4 text-bright_ocean-500" />
-              {mode === 'coop' ? 'Join Game' : 'Select Team'}
+              {mode === 'solo' ? <User className="w-4 h-4 text-bright_ocean-500" /> : <Users className="w-4 h-4 text-bright_ocean-500" />}
+              {mode === 'coop' || mode === 'solo' ? 'Join Game' : 'Select Team'}
             </label>
             
             {mode === 'coop' ? (
@@ -566,6 +591,15 @@ function PlayJoinContent() {
                 onClick={() => handleJoin('coop')}
               >
                 The Collective
+              </Button>
+            ) : mode === 'solo' ? (
+              <Button 
+                variant="accent" 
+                className="w-full py-5 text-xl bg-cream-500 border-cream-300 text-imperial_blue-800 hover:bg-cream-400 hover:border-cream-200 active:border-b-0"
+                disabled={!name.trim()}
+                onClick={() => handleJoin('solo')}
+              >
+                Enter Free-for-All
               </Button>
             ) : (
               <div className="flex flex-col gap-4">

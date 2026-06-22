@@ -12,7 +12,7 @@ export default function Home() {
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
   const [roomCode, setRoomCode] = useState('');
 
-  const handleHostGame = (mode: 'team' | 'coop') => {
+  const handleHostGame = (mode: 'team' | 'coop' | 'solo') => {
     // Basic room generation for now
     const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
     router.push(`/host/${roomId}?mode=${mode}`);
@@ -119,16 +119,16 @@ export default function Home() {
             </Button>
             
             <Button 
-              variant="secondary" 
+              variant="accent" 
               className="w-full py-6 flex-col gap-1 items-start px-6"
-              onClick={() => handleHostGame('coop')}
+              onClick={() => handleHostGame('solo')}
             >
               <div className="flex items-center gap-2 text-xl">
-                <User className="w-6 h-6 text-frosted_mint-500" />
-                Cooperative (Solo Team)
+                <User className="w-6 h-6 text-imperial_blue-800" />
+                Free-for-All (Solo)
               </div>
               <div className="text-sm text-imperial_blue-800 font-normal text-left">
-                Everyone works together to beat the game's high score.
+                Everyone guesses individually. Most points wins!
               </div>
             </Button>
           </div>

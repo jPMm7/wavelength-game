@@ -1,4 +1,4 @@
-export type GameMode = 'team' | 'coop';
+export type GameMode = 'team' | 'coop' | 'solo';
 export type GamePhase = 'setup' | 'clue' | 'guess' | 'guess_blind' | 'guess_debate' | 'reveal' | 'score' | 'game_over';
 
 export interface IndividualGuess {

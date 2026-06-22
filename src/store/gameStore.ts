@@ -70,7 +70,41 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   setGuessAngle: (guessAngle) => set({ guessAngle }),
   
-  submitGuess: (guessAngle) => set({ guessAngle, phase: 'reveal' }),
+  submitGuess: (guessAngle) => set((state) => {
+    const calculatePoints = (target: number, guess: number) => {
+      const diff = Math.abs(target - guess);
+      if (diff <= 5) return 4;
+      if (diff <= 15) return 3;
+      if (diff <= 25) return 2;
+      return 0;
+    };
+
+    const newState: Partial<GameState> = { guessAngle, phase: 'reveal' };
+    const newTeams = [...state.teams];
+    
+    if (state.mode === 'solo') {
+      Object.values(state.individualGuesses).forEach(guess => {
+        const points = calculatePoints(state.targetAngle, guess.angle);
+        if (points > 0) {
+          const teamIndex = newTeams.findIndex(t => t.id === guess.id);
+          if (teamIndex !== -1) {
+            newTeams[teamIndex] = { ...newTeams[teamIndex], score: newTeams[teamIndex].score + points };
+          }
+        }
+      });
+    } else {
+      const points = calculatePoints(state.targetAngle, guessAngle);
+      if (points > 0) {
+        const teamIndex = newTeams.findIndex(t => t.id === state.currentTeamId);
+        if (teamIndex !== -1) {
+          newTeams[teamIndex] = { ...newTeams[teamIndex], score: newTeams[teamIndex].score + points };
+        }
+      }
+    }
+    
+    newState.teams = newTeams;
+    return newState;
+  }),
   
   addScore: (teamId, points) => set((state) => ({
     teams: state.teams.map(t => t.id === teamId ? { ...t, score: t.score + points } : t)
@@ -107,7 +141,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     winnerId: null,
     currentCard: null,
     clue: '',
-    guessAngle: 90
+    guessAngle: 90,
+    individualGuesses: {}
   }),
   
   setTeamPsychicIndex: (teamId, index) => set((state) => ({
