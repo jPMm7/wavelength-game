@@ -353,7 +353,9 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
     }
 
     if (masterState.phase === 'game_over') {
-      const isWinner = masterState.winnerId === myTeamId;
+      const isWinner = masterState.mode === 'solo' 
+        ? masterState.winnerId === myId 
+        : masterState.winnerId === myTeamId;
       return (
         <div className="flex-1 flex items-center justify-center">
           <div className={`p-8 rounded-3xl border-4 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500 ${isWinner ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-imperial_blue-400 border-imperial_blue-300'}`}>

@@ -447,9 +447,10 @@ function HostGameContent() {
                   size="xl" 
                   className="w-full md:flex-1 py-6 text-xl md:text-2xl"
                   onClick={() => {
+                    const currentMode = store.mode;
                     localStorage.removeItem(`wave_room_state_${roomId}`);
                     store.resetGame();
-                    router.push(`/host/${roomId}`);
+                    router.push(`/host/${roomId}?mode=${currentMode}`);
                   }}
                 >
                   <RefreshCcw className="w-6 h-6 mr-2" /> Play Again
