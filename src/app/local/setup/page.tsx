@@ -5,26 +5,40 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { useGameStore } from '@/store/gameStore';
 import { GameMode } from '@/types/game.types';
-import { Users, User, ArrowRight, ArrowLeft, Infinity } from 'lucide-react';
+import { Users, User, ArrowRight, ArrowLeft, Infinity, Plus, X } from 'lucide-react';
 
 export default function LocalSetup() {
   const router = useRouter();
   const setGameConfig = useGameStore((state) => state.setGameConfig);
   
   const [mode, setMode] = useState<GameMode>('team');
-  const [team1Name, setTeam1Name] = useState('Left Brains');
-  const [team2Name, setTeam2Name] = useState('Right Brains');
   const [targetScore, setTargetScore] = useState(10);
   const [isFreeplay, setIsFreeplay] = useState(false);
+
+  // Dynamic Teams array
+  const [localTeams, setLocalTeams] = useState([
+    { id: 'team1', name: 'Pigs' },
+    { id: 'team2', name: 'Dinossaurs' }
+  ]);
+
+  const handleAddTeam = () => {
+    setLocalTeams([...localTeams, { id: `team${Date.now()}`, name: `Team ${localTeams.length + 1}` }]);
+  };
+
+  const handleRemoveTeam = (id: string) => {
+    if (localTeams.length <= 2) return;
+    setLocalTeams(localTeams.filter(t => t.id !== id));
+  };
+
+  const handleTeamNameChange = (id: string, name: string) => {
+    setLocalTeams(localTeams.map(t => t.id === id ? { ...t, name } : t));
+  };
 
   const handleStartGame = (e: React.FormEvent) => {
     e.preventDefault();
     
     const teams = mode === 'team' 
-      ? [
-          { id: 'team1', name: team1Name, score: 0 },
-          { id: 'team2', name: team2Name, score: 0 }
-        ]
+      ? localTeams.map(t => ({ ...t, score: 0 }))
       : [
           { id: 'coop', name: 'The Collective', score: 0 }
         ];
@@ -87,28 +101,44 @@ export default function LocalSetup() {
           {/* Team Names (Conditional) */}
           {mode === 'team' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-bright_ocean-800 uppercase tracking-widest">Teams</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-white font-bold block">Team 1 Name</label>
-                  <input 
-                    type="text" 
-                    value={team1Name}
-                    onChange={(e) => setTeam1Name(e.target.value)}
-                    className="w-full bg-imperial_blue-200 text-white font-bold text-xl px-4 py-3 rounded-xl border-2 border-imperial_blue-300 focus:outline-none focus:border-bright_ocean-500"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-white font-bold block">Team 2 Name</label>
-                  <input 
-                    type="text" 
-                    value={team2Name}
-                    onChange={(e) => setTeam2Name(e.target.value)}
-                    className="w-full bg-imperial_blue-200 text-white font-bold text-xl px-4 py-3 rounded-xl border-2 border-imperial_blue-300 focus:outline-none focus:border-bright_ocean-500"
-                    required
-                  />
-                </div>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-bright_ocean-800 uppercase tracking-widest">Teams</h2>
+                {localTeams.length < 8 && (
+                  <button
+                    type="button"
+                    onClick={handleAddTeam}
+                    className="flex items-center gap-1 text-sm font-bold text-imperial_blue-800 bg-bright_ocean-500/20 hover:bg-bright_ocean-500/30 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Add Team
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {localTeams.map((team, index) => (
+                  <div key={team.id} className="space-y-2 relative">
+                    <label className="text-white font-bold block">Team {index + 1} Name</label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={team.name}
+                        onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
+                        className="w-full bg-imperial_blue-200 text-white font-bold text-xl px-4 py-3 rounded-xl border-2 border-imperial_blue-300 focus:outline-none focus:border-bright_ocean-500 pr-12"
+                        required
+                      />
+                      {localTeams.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTeam(team.id)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-imperial_blue-800/50 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                          title="Remove Team"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -147,9 +177,9 @@ export default function LocalSetup() {
           </div>
 
           <div className="pt-8">
-            <Button type="submit" variant="accent" size="xl" className="py-6 text-3xl">
+            <Button type="submit" variant="accent" size="xl" className="py-6 text-3xl w-full">
               START GAME
-              <ArrowRight className="w-8 h-8" />
+              <ArrowRight className="w-8 h-8 ml-2" />
             </Button>
           </div>
 

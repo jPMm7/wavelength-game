@@ -144,7 +144,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
           {/* Pointer line */}
           <line x1="200" y1="200" x2="200" y2="40" stroke="#010f2c" strokeWidth="10" strokeLinecap="round" />
           {/* Pointer needle tip */}
-          <circle cx="200" cy="40" r="8" fill={interactive ? "#ef4444" : "#ffffff"} className="drop-shadow-sm" />
+          <circle cx="200" cy="40" r="8" fill="#ffffff" className="drop-shadow-sm" />
           {/* Pointer base pivot (Dark) */}
           <circle cx="200" cy="200" r="32" fill="#010f2c" />
           {/* Pointer base pivot (White/Cream center) */}

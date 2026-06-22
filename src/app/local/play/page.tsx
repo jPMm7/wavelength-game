@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { GameDial } from '@/components/wheel/GameDial';
 import { Button } from '@/components/ui/Button';
-import { EyeOff, ArrowRight } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { EyeOff, ArrowRight, X, Dices } from 'lucide-react';
 
 export default function LocalPlay() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function LocalPlay() {
   const [shieldOpen, setShieldOpen] = useState(true);
   const [clueInput, setClueInput] = useState('');
   const [localGuess, setLocalGuess] = useState(90);
+  const [localTarget, setLocalTarget] = useState(90);
+  const [isEndGameModalOpen, setIsEndGameModalOpen] = useState(false);
 
   // Reset shield and inputs when phase changes to 'clue'
   useEffect(() => {
@@ -34,8 +37,9 @@ export default function LocalPlay() {
       setShieldOpen(true);
       setClueInput('');
       setLocalGuess(90);
+      setLocalTarget(targetAngle);
     }
-  }, [phase]);
+  }, [phase, targetAngle]);
 
   // If no teams are set, we shouldn't be here (e.g., accessed via URL without setup)
   useEffect(() => {
@@ -83,8 +87,16 @@ export default function LocalPlay() {
             </div>
           ))}
         </div>
-        <div className="text-bright_ocean-500 font-bold uppercase tracking-widest hidden md:block">
-          Playing to {targetScore}
+        <div className="flex items-center gap-6">
+          <div className="text-bright_ocean-500 font-bold uppercase tracking-widest hidden md:block">
+            Playing to {targetScore}
+          </div>
+          <button 
+            onClick={() => setIsEndGameModalOpen(true)}
+            className="text-red-400 hover:text-white bg-black/20 hover:bg-red-500 px-4 py-2 rounded-xl transition-colors flex items-center gap-2 font-bold shadow-[0_2px_0_0_#010f2c] active:shadow-none active:translate-y-[2px]"
+          >
+            <X className="w-5 h-5" /> END GAME
+          </button>
         </div>
       </div>
 
@@ -129,18 +141,29 @@ export default function LocalPlay() {
             ) : (
               <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
                 <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c]">
-                  <h2 className="text-2xl font-bold text-cream-500 mb-6 uppercase tracking-widest text-center">
-                    Where is the target?
-                  </h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl md:text-2xl font-bold text-cream-500 uppercase tracking-widest flex-1">
+                      Adjust the Target (Optional)
+                    </h2>
+                    <button 
+                      onClick={() => setLocalTarget(Math.floor(Math.random() * 140) + 20)}
+                      className="p-3 bg-bright_ocean-500 text-white rounded-xl hover:bg-bright_ocean-400 transition-colors shadow-[0_4px_0_0_#010f2c] active:translate-y-[4px] active:shadow-none flex items-center gap-2 font-bold"
+                      title="Randomize Target"
+                    >
+                      <Dices className="w-6 h-6" />
+                      <span className="hidden md:inline">Randomize</span>
+                    </button>
+                  </div>
                   <GameDial 
-                    targetAngle={targetAngle} 
-                    guessAngle={targetAngle} 
+                    targetAngle={localTarget} 
+                    guessAngle={localTarget} 
                     shutterOpen={true} 
-                    interactive={false} 
+                    interactive={true} 
+                    onGuessChange={setLocalTarget}
                   />
                 </div>
                 
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col gap-4">
                   <input 
                     type="text" 
                     value={clueInput}
@@ -148,14 +171,25 @@ export default function LocalPlay() {
                     placeholder="Enter your clue..."
                     className="flex-1 bg-white text-imperial_blue-800 font-black text-3xl px-8 py-6 rounded-2xl border-8 border-imperial_blue-300 focus:outline-none focus:border-bright_ocean-500 transition-colors placeholder:text-gray-300"
                   />
-                  <Button 
-                    variant="primary" 
-                    size="xl" 
-                    disabled={!clueInput.trim()}
-                    onClick={() => submitClue(clueInput.trim())}
-                  >
-                    Lock Clue
-                  </Button>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <Button 
+                      variant="primary" 
+                      size="xl" 
+                      className="flex-1"
+                      disabled={!clueInput.trim()}
+                      onClick={() => submitClue(clueInput.trim(), localTarget)}
+                    >
+                      Lock Clue
+                    </Button>
+                    <Button 
+                      variant="accent" 
+                      size="xl" 
+                      className="flex-1"
+                      onClick={() => submitClue('Spoken Aloud 🗣️', localTarget)}
+                    >
+                      Say It Out Loud
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -228,6 +262,26 @@ export default function LocalPlay() {
         )}
 
       </div>
+
+      <Modal 
+        isOpen={isEndGameModalOpen} 
+        onClose={() => setIsEndGameModalOpen(false)}
+        title="End Game"
+      >
+        <div className="space-y-6 text-center">
+          <p className="text-xl text-white font-bold">
+            Are you sure you want to end the game?
+          </p>
+          <div className="flex gap-4">
+            <Button variant="primary" size="lg" className="flex-1" onClick={() => setIsEndGameModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="accent" size="lg" className="flex-1 !bg-red-500 hover:!bg-red-400 !border-red-300 !text-white" onClick={() => router.push('/')}>
+              End Game
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

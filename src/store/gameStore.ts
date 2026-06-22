@@ -50,7 +50,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setPhase: (phase) => set({ phase }),
   
-  submitClue: (clue) => set({ clue, phase: 'guess' }),
+  submitClue: (clue, customTarget) => set((state) => ({ 
+    clue, 
+    targetAngle: customTarget !== undefined ? customTarget : state.targetAngle,
+    phase: 'guess' 
+  })),
   
   submitGuess: (guessAngle) => set({ guessAngle, phase: 'reveal' }),
   

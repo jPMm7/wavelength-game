@@ -30,7 +30,7 @@ export interface GameState {
   setGameConfig: (mode: GameMode, teams: Team[], targetScore: number) => void;
   setPhase: (phase: GamePhase) => void;
   startRound: () => void;
-  submitClue: (clue: string) => void;
+  submitClue: (clue: string, customTarget?: number) => void;
   submitGuess: (angle: number) => void;
   addScore: (teamId: string, points: number) => void;
   nextTurn: () => void;
