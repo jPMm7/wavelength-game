@@ -6,7 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 import { GameDial } from '@/components/wheel/GameDial';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { EyeOff, ArrowRight, X, Dices } from 'lucide-react';
+import { EyeOff, ArrowRight, X, Dices, MessageCircle } from 'lucide-react';
 
 export default function LocalPlay() {
   const router = useRouter();
@@ -76,10 +76,10 @@ export default function LocalPlay() {
   if (!currentTeam || !currentCard) return <div className="min-h-screen bg-imperial_blue-500" />;
 
   return (
-    <div className="min-h-screen flex flex-col p-6 lg:p-12 bg-gradient-to-b from-imperial_blue-500 to-imperial_blue-600 overflow-hidden">
+    <div className="min-h-screen lg:h-screen flex flex-col p-4 lg:p-6 bg-gradient-to-b from-imperial_blue-500 to-imperial_blue-600 overflow-y-auto lg:overflow-hidden">
       
       {/* Header: Scores */}
-      <div className="flex flex-wrap justify-between items-center mb-8 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[0_4px_0_0_#010f2c] gap-4">
+      <div className="flex flex-wrap justify-between items-center mb-4 md:mb-6 bg-imperial_blue-400 p-3 md:p-4 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[0_4px_0_0_#010f2c] gap-4 shrink-0">
         <div className="flex gap-4">
           {teams.map(team => (
             <div key={team.id} className={`px-6 py-2 rounded-xl font-bold text-xl uppercase tracking-widest border-2 border-transparent transition-all ${team.id === currentTeamId ? 'bg-cream-500 text-imperial_blue-800 shadow-[0_4px_0_0_#010f2c] -translate-y-1' : 'text-white bg-imperial_blue-500 border-imperial_blue-300'}`}>
@@ -101,11 +101,11 @@ export default function LocalPlay() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center max-w-4xl mx-auto w-full space-y-8">
+      <div className="flex-1 flex flex-col items-center max-w-4xl mx-auto w-full space-y-4 md:space-y-6 min-h-0">
         
         {/* The Card */}
-        <div className="w-full flex justify-between items-center bg-white p-6 rounded-3xl border-8 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c]">
-          <div className="text-xl md:text-4xl font-black text-imperial_blue-800 uppercase text-center flex-1 break-words">
+        <div className="w-full flex justify-between items-center bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] shrink-0">
+          <div className="text-lg md:text-3xl lg:text-4xl font-black text-imperial_blue-800 uppercase text-center flex-1 break-words leading-tight">
             {currentCard.leftConcept}
           </div>
           <div className="w-12 h-12 md:w-16 md:h-16 bg-bright_ocean-500 rounded-full flex items-center justify-center text-white font-bold text-lg md:text-xl flex-shrink-0 mx-4 border-4 border-white shadow-inner">
@@ -139,10 +139,10 @@ export default function LocalPlay() {
                 </Button>
               </div>
             ) : (
-              <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c]">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl md:text-2xl font-bold text-cream-500 uppercase tracking-widest flex-1">
+              <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+                <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
+                  <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
+                    <h2 className="text-lg md:text-2xl font-bold text-cream-500 uppercase tracking-widest flex-1">
                       Adjust the Target (Optional)
                     </h2>
                     <button 
@@ -154,22 +154,24 @@ export default function LocalPlay() {
                       <span className="hidden md:inline">Randomize</span>
                     </button>
                   </div>
-                  <GameDial 
-                    targetAngle={localTarget} 
-                    guessAngle={localTarget} 
-                    shutterOpen={true} 
-                    interactive={true} 
-                    onGuessChange={setLocalTarget}
-                  />
+                  <div className="flex-1 min-h-0 flex items-center justify-center">
+                    <GameDial 
+                      targetAngle={localTarget} 
+                      guessAngle={localTarget} 
+                      shutterOpen={true} 
+                      interactive={true} 
+                      onGuessChange={setLocalTarget}
+                    />
+                  </div>
                 </div>
                 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 md:gap-4 shrink-0">
                   <input 
                     type="text" 
                     value={clueInput}
                     onChange={(e) => setClueInput(e.target.value)}
                     placeholder="Enter your clue..."
-                    className="flex-1 bg-white text-imperial_blue-800 font-black text-3xl px-8 py-6 rounded-2xl border-8 border-imperial_blue-300 focus:outline-none focus:border-bright_ocean-500 transition-colors placeholder:text-gray-300"
+                    className="w-full bg-white text-imperial_blue-800 font-black text-xl md:text-3xl px-6 md:px-8 py-4 md:py-6 rounded-2xl border-4 md:border-8 border-imperial_blue-300 focus:outline-none focus:border-bright_ocean-500 transition-colors placeholder:text-gray-300"
                   />
                   <div className="flex flex-col md:flex-row gap-4">
                     <Button 
@@ -185,8 +187,9 @@ export default function LocalPlay() {
                       variant="accent" 
                       size="xl" 
                       className="flex-1"
-                      onClick={() => submitClue('Spoken Aloud 🗣️', localTarget)}
+                      onClick={() => submitClue('Spoken Aloud', localTarget)}
                     >
+                      <MessageCircle className="w-6 h-6 mr-2" />
                       Say It Out Loud
                     </Button>
                   </div>
@@ -197,23 +200,25 @@ export default function LocalPlay() {
         )}
 
         {phase === 'guess' && (
-          <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="bg-white p-6 rounded-3xl border-8 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center">
-              <h2 className="text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-2">The Clue Is:</h2>
-              <p className="text-4xl md:text-5xl font-black text-imperial_blue-800 uppercase">"{clue}"</p>
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
+              <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Is:</h2>
+              <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{clue}"</p>
             </div>
 
-            <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c]">
-              <h2 className="text-2xl font-bold text-cream-500 mb-6 uppercase tracking-widest text-center">
+            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
+              <h2 className="text-xl md:text-2xl font-bold text-cream-500 mb-4 md:mb-6 uppercase tracking-widest text-center shrink-0">
                 Discuss and Dial Your Guess
               </h2>
-              <GameDial 
-                targetAngle={targetAngle} 
-                guessAngle={localGuess} 
-                shutterOpen={false} 
-                interactive={true} 
-                onGuessChange={setLocalGuess}
-              />
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <GameDial 
+                  targetAngle={targetAngle} 
+                  guessAngle={localGuess} 
+                  shutterOpen={false} 
+                  interactive={true} 
+                  onGuessChange={setLocalGuess}
+                />
+              </div>
             </div>
             
             <Button 
@@ -228,26 +233,28 @@ export default function LocalPlay() {
         )}
 
         {phase === 'reveal' && (
-          <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="bg-white p-6 rounded-3xl border-8 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center">
-              <h2 className="text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-2">The Clue Was:</h2>
-              <p className="text-4xl font-black text-imperial_blue-800 uppercase">"{clue}"</p>
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
+              <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Was:</h2>
+              <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{clue}"</p>
             </div>
 
-            <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c]">
-              <div className="mb-6 flex justify-center">
-                <div className={`px-8 py-3 rounded-2xl border-4 shadow-[0_4px_0_0_#010f2c] ${calculatePoints(targetAngle, storeGuessAngle) > 0 ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-red-500 border-red-300'}`}>
-                  <h2 className="text-4xl font-black text-imperial_blue-800 uppercase tracking-widest text-center drop-shadow-sm">
+            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
+              <div className="mb-4 md:mb-6 flex justify-center shrink-0">
+                <div className={`px-6 py-2 md:px-8 md:py-3 rounded-2xl border-4 shadow-[0_4px_0_0_#010f2c] ${calculatePoints(targetAngle, storeGuessAngle) > 0 ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-red-500 border-red-300'}`}>
+                  <h2 className="text-2xl md:text-4xl font-black text-imperial_blue-800 uppercase tracking-widest text-center drop-shadow-sm">
                     +{calculatePoints(targetAngle, storeGuessAngle)} Points!
                   </h2>
                 </div>
               </div>
-              <GameDial 
-                targetAngle={targetAngle} 
-                guessAngle={storeGuessAngle} 
-                shutterOpen={true} 
-                interactive={false} 
-              />
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <GameDial 
+                  targetAngle={targetAngle} 
+                  guessAngle={storeGuessAngle} 
+                  shutterOpen={true} 
+                  interactive={false} 
+                />
+              </div>
             </div>
             
             <Button 
