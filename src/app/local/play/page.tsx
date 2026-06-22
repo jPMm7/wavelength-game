@@ -6,7 +6,8 @@ import { useGameStore } from '@/store/gameStore';
 import { GameDial } from '@/components/wheel/GameDial';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { EyeOff, ArrowRight, X, Dices, MessageCircle } from 'lucide-react';
+import { EyeOff, ArrowRight, X, Dices, MessageCircle, Home, Trophy, RefreshCcw } from 'lucide-react';
+import { Confetti } from '@/components/ui/Confetti';
 
 export default function LocalPlay() {
   const router = useRouter();
@@ -65,8 +66,7 @@ export default function LocalPlay() {
     
     // Check if team won
     if ((currentTeam?.score || 0) + points >= targetScore) {
-      alert(`🎉 ${currentTeam?.name} WINS! 🎉`);
-      router.push('/');
+      useGameStore.getState().setGameOver(currentTeamId!);
       return;
     }
     
@@ -265,6 +265,50 @@ export default function LocalPlay() {
             >
               Next Round <ArrowRight className="w-8 h-8 ml-2" />
             </Button>
+          </div>
+        )}
+
+        {/* Phase: Game Over */}
+        {phase === 'game_over' && (
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in zoom-in duration-700 items-center justify-center relative">
+            <Confetti />
+            
+            <div className="bg-imperial_blue-400 p-8 md:p-12 rounded-[3rem] border-8 border-imperial_blue-300 shadow-[0_16px_0_0_#010f2c] text-center max-w-2xl w-full relative z-10 flex flex-col items-center">
+              <Trophy className="w-32 h-32 md:w-48 md:h-48 text-bright_ocean-500 drop-shadow-[0_8px_0_#010f2c] mb-8 animate-bounce" />
+              
+              <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-widest mb-4 drop-shadow-[0_4px_0_#010f2c]">
+                Victory!
+              </h1>
+              
+              <p className="text-2xl md:text-4xl font-bold text-cream-500 uppercase tracking-widest bg-imperial_blue-500/50 p-6 rounded-2xl border-4 border-imperial_blue-300 shadow-inner w-full">
+                {teams.find(t => t.id === useGameStore.getState().winnerId)?.name} Wins!
+              </p>
+              
+              <div className="mt-12 w-full flex flex-col md:flex-row gap-4">
+                <Button 
+                  variant="primary" 
+                  size="xl" 
+                  className="w-full md:flex-1 py-6 text-xl md:text-2xl"
+                  onClick={() => {
+                    useGameStore.getState().resetGame();
+                    router.push('/local/setup');
+                  }}
+                >
+                  <RefreshCcw className="w-6 h-6 mr-2" /> Play Again
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="xl" 
+                  className="w-full md:flex-1 py-6 text-xl md:text-2xl bg-black/20 hover:bg-black/40 text-white border-transparent"
+                  onClick={() => {
+                    useGameStore.getState().resetGame();
+                    router.push('/');
+                  }}
+                >
+                  <Home className="w-6 h-6 mr-2" /> Return to Home
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 

@@ -56,3 +56,12 @@ body {
   background-color: var(--color-imperial_blue-500);
   color: #ffffff;
 }
+
+/* Hide scrollbar globally for a native app feel */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

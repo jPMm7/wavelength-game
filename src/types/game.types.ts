@@ -1,10 +1,18 @@
 export type GameMode = 'team' | 'coop';
-export type GamePhase = 'setup' | 'clue' | 'guess' | 'reveal' | 'score';
+export type GamePhase = 'setup' | 'clue' | 'guess' | 'guess_blind' | 'guess_debate' | 'reveal' | 'score' | 'game_over';
+
+export interface IndividualGuess {
+  id: string;
+  name: string;
+  angle: number;
+  color?: string;
+}
 
 export interface Team {
   id: string;
   name: string;
   score: number;
+  psychicIndex?: number;
 }
 
 export interface Card {
@@ -19,20 +27,27 @@ export interface GameState {
   teams: Team[];
   currentTeamId: string | null;
   targetScore: number;
+  winnerId: string | null;
   
   // Current Round State
   currentCard: Card | null;
   targetAngle: number; // 0 to 180
   clue: string;
   guessAngle: number; // 0 to 180
+  individualGuesses: Record<string, IndividualGuess>;
   
   // Actions
   setGameConfig: (mode: GameMode, teams: Team[], targetScore: number) => void;
   setPhase: (phase: GamePhase) => void;
   startRound: () => void;
-  submitClue: (clue: string, customTarget?: number) => void;
+  submitClue: (clue: string, customTarget?: number, nextPhase?: GamePhase) => void;
+  submitIndividualGuess: (guess: IndividualGuess) => void;
+  setGuessDebatePhase: () => void;
+  setGuessAngle: (angle: number) => void;
   submitGuess: (angle: number) => void;
   addScore: (teamId: string, points: number) => void;
   nextTurn: () => void;
   resetGame: () => void;
+  setTeamPsychicIndex: (teamId: string, index: number) => void;
+  setGameOver: (teamId: string) => void;
 }

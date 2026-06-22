@@ -3,7 +3,8 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { User, Users, CheckCircle2, ArrowLeft, Plus } from 'lucide-react';
+import { GameDial } from '@/components/wheel/GameDial';
+import { User, Users, CheckCircle2, ArrowLeft, Plus, EyeOff, MessageCircle, Dices, Clock, RefreshCcw, Crown } from 'lucide-react';
 
 interface MockTeam {
   id: string;
@@ -20,6 +21,309 @@ const TEAM_COLORS = [
   'bg-green-500 border-green-300'
 ];
 
+function PlayerGameController({ roomId, myId, myTeamId, masterState, players, onLeave }: { roomId: string, myId: string, myTeamId: string, masterState: any, players: any[], onLeave: () => void }) {
+  const isMyTeam = myTeamId === masterState.currentTeamId;
+  const currentTeam = masterState.teams.find((t:any) => t.id === masterState.currentTeamId);
+  const teamPlayers = players.filter((p:any) => p.teamId === currentTeam?.id);
+  const myIndexInTeam = teamPlayers.findIndex((p:any) => p.id === myId);
+  const myPlayer = players.find((p:any) => p.id === myId);
+  const myPlayerTeam = masterState.teams.find((t:any) => t.id === myTeamId);
+  
+  // Predictably determine who the psychic is based on the index
+  const isPsychic = isMyTeam && teamPlayers.length > 0 && 
+    ((currentTeam?.psychicIndex || 0) % teamPlayers.length) === myIndexInTeam;
+
+  // The Guessers are now everyone NOT on the current team (the opposing team)
+  const isGuesser = !isMyTeam;
+  const guessingPlayers = players.filter((p:any) => p.teamId !== currentTeam?.id);
+  const myIndexInGuessers = guessingPlayers.findIndex((p:any) => p.id === myId);
+
+  // The Captain is mathematically chosen from the guessing players
+  const isCaptain = isGuesser && guessingPlayers.length > 0 &&
+    (guessingPlayers.length === 1 ? true : ((currentTeam?.psychicIndex || 0) % guessingPlayers.length) === myIndexInGuessers);
+
+  const [clueInput, setClueInput] = useState('');
+  const [localTarget, setLocalTarget] = useState(90);
+  const [localGuess, setLocalGuess] = useState(90);
+  const [hasSubmittedBlind, setHasSubmittedBlind] = useState(false);
+
+  // Sync states
+  useEffect(() => {
+    if (masterState.phase === 'clue') {
+      setLocalTarget(masterState.targetAngle);
+      setClueInput('');
+    }
+    if (masterState.phase === 'guess_blind') {
+      setLocalGuess(90);
+      setHasSubmittedBlind(false);
+    }
+  }, [masterState.phase, masterState.targetAngle]);
+
+  const handleLockClue = (clue: string) => {
+    localStorage.setItem(`wave_room_clue_${roomId}`, JSON.stringify({
+      clue,
+      targetAngle: localTarget,
+      ts: Date.now()
+    }));
+  };
+
+  const handleGuessChange = (angle: number) => {
+    setLocalGuess(angle);
+    if (masterState.phase === 'guess_debate') {
+      localStorage.setItem(`wave_room_guess_${roomId}`, JSON.stringify({ angle, ts: Date.now() }));
+    }
+  };
+
+  const handleSubmitBlindGuess = () => {
+    setHasSubmittedBlind(true);
+    localStorage.setItem(`wave_room_secret_guess_${roomId}`, JSON.stringify({
+      id: myId,
+      name: myPlayer?.name || 'Player',
+      angle: localGuess,
+      color: '#ffffff',
+      ts: Date.now()
+    }));
+  };
+
+  const handleLockGuess = () => {
+    localStorage.setItem(`wave_room_action_${roomId}`, JSON.stringify({ type: 'LOCK_GUESS', ts: Date.now() }));
+  };
+
+  const individualGuessesArray = masterState.individualGuesses ? Object.values(masterState.individualGuesses) : [];
+
+  const renderHeader = () => (
+    <div className="flex flex-col gap-2 shrink-0 animate-in fade-in slide-in-from-top-4 duration-500 z-10">
+      <div className="flex items-center justify-between bg-black/20 p-3 rounded-2xl border border-black/10 shadow-inner">
+        <div>
+          <span className="text-white/50 text-[10px] font-bold uppercase tracking-widest block leading-tight">Playing As</span>
+          <span className="text-white font-black text-base">{myPlayer?.name}</span>
+        </div>
+        <div className="text-right">
+          <span className="text-white/50 text-[10px] font-bold uppercase tracking-widest block leading-tight">Team</span>
+          <span className={`font-black text-base ${myPlayerTeam?.color?.split(' ')[0].replace('bg-', 'text-') || 'text-bright_ocean-500'}`}>{myPlayerTeam?.name}</span>
+        </div>
+      </div>
+      
+      {masterState.phase === 'guess_blind' && isGuesser && (
+        <div className="bg-black/20 p-3 rounded-2xl border border-black/10 shadow-inner">
+          <span className="text-white/50 text-[10px] font-bold uppercase tracking-widest block mb-2 leading-tight">Team Submissions</span>
+          <div className="flex flex-wrap gap-2">
+            {guessingPlayers.map((p: any) => {
+              const hasGuessed = !!masterState.individualGuesses?.[p.id];
+              return (
+                <div key={p.id} className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${hasGuessed ? 'bg-frosted_mint-500/20 text-frosted_mint-500' : 'bg-white/10 text-white/50'}`}>
+                  {hasGuessed ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                  {p.name}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderContent = () => {
+    if (masterState.phase === 'clue') {
+      if (isPsychic) {
+        return (
+          <div className="flex-1 flex flex-col min-h-0 space-y-4">
+            <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
+              <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">Your Concepts:</h2>
+              <div className="text-xl md:text-3xl font-black text-imperial_blue-800 uppercase break-words leading-tight">
+                {masterState.currentCard.leftConcept} <span className="text-bright_ocean-500 text-lg">VS</span> {masterState.currentCard.rightConcept}
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest flex-1">Adjust Target</h2>
+                <button 
+                  onClick={() => setLocalTarget(Math.floor(Math.random() * 140) + 20)}
+                  className="p-2 bg-bright_ocean-500 text-white rounded-lg active:translate-y-[2px]"
+                >
+                  <Dices className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <GameDial interactive={true} shutterOpen={true} targetAngle={localTarget} guessAngle={localTarget} onGuessChange={setLocalTarget} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 shrink-0">
+              <input 
+                type="text" 
+                value={clueInput}
+                onChange={(e) => setClueInput(e.target.value)}
+                placeholder="Enter your clue..."
+                className="w-full bg-white text-imperial_blue-800 font-black text-xl px-6 py-4 rounded-2xl border-4 border-imperial_blue-300 focus:outline-none placeholder:text-gray-300"
+              />
+              <div className="flex gap-2">
+                <Button variant="primary" size="lg" className="flex-1" disabled={!clueInput.trim()} onClick={() => handleLockClue(clueInput.trim())}>
+                  Lock Clue
+                </Button>
+                <Button variant="accent" size="lg" className="flex-1" onClick={() => handleLockClue('Spoken Aloud')}>
+                  <MessageCircle className="w-5 h-5 mr-1" /> Say It
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+              <EyeOff className="w-20 h-20 text-frosted_mint-500 mx-auto mb-4 drop-shadow-[0_4px_0_rgba(0,0,0,0.3)] animate-pulse" />
+              <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Psychic Phase</h2>
+              <p className="text-cream-500 font-bold">Waiting for {currentTeam?.name} Psychic to provide a clue. Look at the Big Screen!</p>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    if (masterState.phase === 'guess_blind') {
+      if (isGuesser) {
+        if (hasSubmittedBlind) {
+          return (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+                <CheckCircle2 className="w-20 h-20 text-frosted_mint-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Locked In</h2>
+                <p className="text-cream-500 font-bold">Waiting for the rest of your team to lock in their guesses...</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex-1 flex flex-col min-h-0 space-y-4">
+            <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
+              <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">The Clue Is:</h2>
+              <p className="text-3xl font-black text-imperial_blue-800 uppercase leading-tight">"{masterState.clue}"</p>
+            </div>
+
+            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
+              <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">Secret Input</h2>
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <GameDial interactive={true} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={localGuess} onGuessChange={handleGuessChange} />
+              </div>
+            </div>
+            
+            <Button variant="primary" size="xl" className="w-full py-6 text-2xl shrink-0" onClick={handleSubmitBlindGuess}>
+              Submit Secret Guess
+            </Button>
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+              <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Secret Guess Phase</h2>
+              <p className="text-cream-500 font-bold">
+                {isPsychic ? "Shh! You can't talk. The opposing team is locking in their blind guesses." : (isMyTeam ? "Waiting for the opposing team to guess." : "Waiting...")}
+              </p>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    if (masterState.phase === 'guess_debate') {
+      if (isGuesser) {
+        if (isCaptain) {
+          return (
+            <div className="flex-1 flex flex-col min-h-0 space-y-4">
+              <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
+                <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">You Are The Captain!</h2>
+                <p className="text-xl font-black text-imperial_blue-800 uppercase leading-tight">Debate, then lock it in.</p>
+              </div>
+
+              <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
+                <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">Drive the Needle</h2>
+                <div className="flex-1 min-h-0 flex items-center justify-center">
+                  <GameDial interactive={true} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={localGuess} onGuessChange={handleGuessChange} individualGuesses={individualGuessesArray as any} />
+                </div>
+              </div>
+              
+              <Button variant="accent" size="xl" className="w-full py-6 text-2xl shrink-0" onClick={handleLockGuess}>
+                Lock It In
+              </Button>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex-1 flex flex-col min-h-0 space-y-4">
+              <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
+                <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">Debate Phase</h2>
+                <p className="text-xl font-black text-imperial_blue-800 uppercase leading-tight">Persuade the Captain!</p>
+              </div>
+
+              <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
+                <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">The Captain is Driving</h2>
+                <div className="flex-1 min-h-0 flex items-center justify-center pointer-events-none">
+                  <GameDial interactive={false} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={masterState.guessAngle} individualGuesses={individualGuessesArray as any} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+      } else {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+              <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Debate Phase</h2>
+              <p className="text-cream-500 font-bold">
+                {isPsychic ? "Shh! You can't talk. Listen to the opposing team argue!" : (isMyTeam ? "Watch the opposing team debate!" : "Waiting...")}
+              </p>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    if (masterState.phase === 'reveal') {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-3xl border-8 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+            <CheckCircle2 className="w-20 h-20 text-frosted_mint-500 mx-auto mb-4" />
+            <h2 className="text-3xl font-black text-imperial_blue-800 uppercase tracking-widest mb-2">Results In!</h2>
+            <p className="text-imperial_blue-500 font-bold text-xl">Check the Big Screen to see how many points were scored!</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (masterState.phase === 'game_over') {
+      const isWinner = masterState.winnerId === myTeamId;
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className={`p-8 rounded-3xl border-4 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500 ${isWinner ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-imperial_blue-400 border-imperial_blue-300'}`}>
+            <h2 className={`text-4xl font-black uppercase tracking-widest mb-2 ${isWinner ? 'text-imperial_blue-800' : 'text-white'}`}>
+              GAME OVER
+            </h2>
+            <p className={`font-bold text-2xl ${isWinner ? 'text-imperial_blue-500' : 'text-cream-500'}`}>
+              {isWinner ? "🎉 YOU WIN! 🎉" : "Better luck next time!"}
+            </p>
+            <p className={`text-sm mt-4 font-bold uppercase tracking-widest ${isWinner ? 'text-imperial_blue-800/50' : 'text-white/50'}`}>
+              Look at the TV
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen h-[100dvh] flex flex-col p-4 bg-gradient-to-b from-imperial_blue-500 to-imperial_blue-600 overflow-hidden space-y-4">
+      {renderHeader()}
+      {renderContent()}
+    </div>
+  );
+}
+
 function PlayJoinContent() {
   const router = useRouter();
   const params = useParams();
@@ -32,8 +336,10 @@ function PlayJoinContent() {
   const [myId, setMyId] = useState<string>('');
   
   const [teams, setTeams] = useState<MockTeam[]>([]);
+  const [players, setPlayers] = useState<any[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+  const [masterState, setMasterState] = useState<any>(null);
 
   useEffect(() => {
     setMyId(Math.random().toString(36).substring(2, 9));
@@ -46,50 +352,56 @@ function PlayJoinContent() {
     } else if (typeof window !== 'undefined') {
       try {
         const config = localStorage.getItem(`wave_room_config_${roomId}`);
-        if (config) {
-          setMode(JSON.parse(config).mode);
-        }
+        if (config) setMode(JSON.parse(config).mode);
       } catch (e) {}
     }
   }, [roomId, searchParams]);
 
-  // Sync teams from localStorage
+  // Sync teams, players, and master state from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     const teamsKey = `wave_room_teams_${roomId}`;
+    const playersKey = `wave_room_${roomId}`;
+    const stateKey = `wave_room_state_${roomId}`;
     
-    const stored = localStorage.getItem(teamsKey);
-    if (stored) {
-      try { setTeams(JSON.parse(stored)); } catch (e) {}
-    }
+    // Initial load
+    try {
+      const storedTeams = localStorage.getItem(teamsKey);
+      if (storedTeams) setTeams(JSON.parse(storedTeams));
+      
+      const storedPlayers = localStorage.getItem(playersKey);
+      if (storedPlayers) setPlayers(JSON.parse(storedPlayers));
+      
+      const ms = localStorage.getItem(stateKey);
+      if (ms) setMasterState(JSON.parse(ms));
+    } catch (e) {}
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === teamsKey && e.newValue) {
-        try { setTeams(JSON.parse(e.newValue)); } catch (err) {}
-      }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [roomId]);
-
-  // Listen for kicks
-  useEffect(() => {
-    if (joinedState === 'unjoined' || typeof window === 'undefined') return;
-    
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === `wave_room_${roomId}`) {
-        if (!e.newValue) {
-          setJoinedState('unjoined');
-          return;
+      try {
+        if (e.key === teamsKey && !e.newValue) {
+          router.push('/');
         }
-        try {
-          const players = JSON.parse(e.newValue);
-          const stillIn = players.some((p: any) => p.id === myId);
-          if (!stillIn) setJoinedState('unjoined');
-        } catch (err) {}
-      }
+        if (e.key === teamsKey && e.newValue) setTeams(JSON.parse(e.newValue));
+        if (e.key === playersKey) {
+          if (e.newValue) {
+            const p = JSON.parse(e.newValue);
+            setPlayers(p);
+            // Auto-kick if missing
+            if (joinedState !== 'unjoined') {
+              const stillIn = p.some((player: any) => player.id === myId);
+              if (!stillIn) setJoinedState('unjoined');
+            }
+          } else {
+            // Room completely disbanded
+            router.push('/');
+          }
+        }
+        if (e.key === stateKey) {
+          if (e.newValue) setMasterState(JSON.parse(e.newValue));
+          else setMasterState(null); // Game ended or reset
+        }
+      } catch (err) {}
     };
 
     window.addEventListener('storage', handleStorage);
@@ -99,15 +411,10 @@ function PlayJoinContent() {
   const handleJoin = (teamId: string) => {
     if (!name.trim()) return;
     
-    const storageKey = `wave_room_${roomId}`;
-    let players = [];
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) players = JSON.parse(stored);
-    } catch (e) {}
-
-    players.push({ id: myId, name: name.trim(), teamId });
-    localStorage.setItem(storageKey, JSON.stringify(players));
+    let currentPlayers = [...players];
+    currentPlayers.push({ id: myId, name: name.trim(), teamId });
+    setPlayers(currentPlayers);
+    localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(currentPlayers));
     
     setJoinedState(teamId);
   };
@@ -117,12 +424,7 @@ function PlayJoinContent() {
     
     const newTeamId = `team_${Math.random().toString(36).substring(2, 6)}`;
     const colorIndex = teams.length % TEAM_COLORS.length;
-    
-    const newTeam = {
-      id: newTeamId,
-      name: newTeamName.trim(),
-      color: TEAM_COLORS[colorIndex]
-    };
+    const newTeam = { id: newTeamId, name: newTeamName.trim(), color: TEAM_COLORS[colorIndex] };
     
     const updatedTeams = [...teams, newTeam];
     setTeams(updatedTeams);
@@ -134,23 +436,24 @@ function PlayJoinContent() {
   };
 
   const handleLeave = () => {
-    const storageKey = `wave_room_${roomId}`;
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        let players = JSON.parse(stored);
-        players = players.filter((p: any) => p.id !== myId);
-        localStorage.setItem(storageKey, JSON.stringify(players));
-      }
-    } catch (e) {}
-    
+    const p = players.filter((player: any) => player.id !== myId);
+    setPlayers(p);
+    localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(p));
     setJoinedState('unjoined');
   };
 
+  // If game is active AND we are joined, show the controller!
+  if (joinedState !== 'unjoined' && masterState && masterState.phase !== 'setup') {
+    return <PlayerGameController roomId={roomId} myId={myId} myTeamId={joinedState} masterState={masterState} players={players} onLeave={handleLeave} />;
+  }
+
+  // Lobby waiting state
   if (joinedState !== 'unjoined') {
     const joinedTeam = teams.find(t => t.id === joinedState);
     const teamName = mode === 'coop' ? 'The Collective' : (joinedTeam?.name || 'A Team');
     
+    const teamPlayers = players.filter((p: any) => p.teamId === joinedState);
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-imperial_blue-500 to-imperial_blue-600">
         <div className="w-full max-w-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
@@ -165,13 +468,36 @@ function PlayJoinContent() {
             </p>
           </div>
 
-          <div className="bg-imperial_blue-400 p-6 rounded-3xl border-4 border-imperial_blue-300 shadow-[0_8px_0_0_#010f2c]">
-            <p className="text-xl font-bold text-white uppercase tracking-widest animate-pulse">
-              Look at the TV
-            </p>
-            <p className="text-white/70 font-medium mt-2">
-              Waiting for host to start the game...
-            </p>
+          <div className="bg-imperial_blue-400 p-6 rounded-3xl border-4 border-imperial_blue-300 shadow-[0_8px_0_0_#010f2c] text-left">
+            <h3 className="text-xs font-bold text-bright_ocean-500 uppercase tracking-widest border-b-2 border-imperial_blue-300 pb-2 mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4" /> Team Roster
+            </h3>
+            
+            <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2">
+              {teamPlayers.length === 0 ? (
+                <p className="text-white/50 text-sm italic text-center py-4">It's quiet in here...</p>
+              ) : (
+                teamPlayers.map((p, index) => (
+                  <div key={p.id} className="flex items-center gap-3 bg-imperial_blue-500 p-3 rounded-xl border-2 border-imperial_blue-300 shadow-inner">
+                    <User className={`w-5 h-5 ${p.id === myId ? 'text-bright_ocean-500' : 'text-white/30'}`} />
+                    <span className="text-white font-bold flex-1 truncate">
+                      {p.name} {p.id === myId && <span className="text-white/50 text-xs font-normal ml-1">(You)</span>}
+                    </span>
+                    {index === 0 && (
+                      <div className="flex items-center gap-1 bg-bright_ocean-500/20 text-bright_ocean-500 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">
+                        <Crown className="w-3 h-3" /> Leader
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t-2 border-imperial_blue-300 text-center">
+              <p className="text-sm font-bold text-white uppercase tracking-widest animate-pulse flex items-center justify-center gap-2">
+                <EyeOff className="w-4 h-4 text-frosted_mint-500" /> Waiting for Host...
+              </p>
+            </div>
           </div>
           
           <button 

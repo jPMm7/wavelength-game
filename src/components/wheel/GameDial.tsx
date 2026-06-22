@@ -9,9 +9,10 @@ interface GameDialProps {
   shutterOpen: boolean; // Whether the scoring wedges are visible
   interactive: boolean; // Whether the user can drag the needle
   onGuessChange?: (angle: number) => void; // Callback when needle moves
+  individualGuesses?: { id: string; name: string; angle: number; color?: string }[];
 }
 
-export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, onGuessChange }: GameDialProps) {
+export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, onGuessChange, individualGuesses }: GameDialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -101,7 +102,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
       <svg 
         ref={svgRef}
         viewBox="-10 -10 420 250" 
-        className="w-full h-auto drop-shadow-2xl"
+        className="w-full h-full max-h-[40vh] md:max-h-[50vh] drop-shadow-2xl"
       >
         {/* Base Semi-Circle */}
         <path 
@@ -135,7 +136,31 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
           />
         )}
 
-        {/* The Dial/Pointer */}
+        {/* The Individual Guesses (Faded Pointers) */}
+        {individualGuesses && individualGuesses.map((guess) => {
+           const labelPos = polarToCartesian(CENTER, 200, RADIUS + 25, guess.angle);
+           return (
+             <g key={guess.id}>
+               <motion.g animate={{ rotate: guess.angle - 90 }} transition={{ type: "spring", bounce: 0.1, duration: 0.5 }} style={{ originX: 210/420, originY: 210/250 }}>
+                 <line x1="200" y1="200" x2="200" y2="40" stroke={guess.color || "#ffffff"} strokeWidth="6" strokeLinecap="round" className="opacity-50" />
+               </motion.g>
+               <motion.text 
+                 animate={{ x: labelPos.x, y: labelPos.y }}
+                 transition={{ type: "spring", bounce: 0.1, duration: 0.5 }}
+                 textAnchor="middle" 
+                 alignmentBaseline="middle" 
+                 fill={guess.color || "#ffffff"} 
+                 fontSize="12" 
+                 fontWeight="black" 
+                 className="drop-shadow-md uppercase"
+               >
+                 {guess.name}
+               </motion.text>
+             </g>
+           );
+        })}
+
+        {/* The Main Dial/Pointer */}
         <motion.g
           animate={{ rotate: guessAngle - 90 }}
           transition={{ type: "spring", bounce: 0.1, duration: isDragging ? 0.05 : 0.5 }}

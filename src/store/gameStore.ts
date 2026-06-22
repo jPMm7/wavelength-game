@@ -18,11 +18,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   teams: [],
   currentTeamId: null,
   targetScore: 10,
+  winnerId: null,
   
   currentCard: null,
   targetAngle: 90,
   clue: '',
   guessAngle: 90,
+  individualGuesses: {},
 
   setGameConfig: (mode, teams, targetScore) => {
     set({
@@ -44,17 +46,29 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentCard,
       clue: '',
       guessAngle: 90,
+      individualGuesses: {},
       phase: 'clue'
     });
   },
 
   setPhase: (phase) => set({ phase }),
   
-  submitClue: (clue, customTarget) => set((state) => ({ 
+  submitClue: (clue, customTarget, nextPhase = 'guess') => set((state) => ({ 
     clue, 
     targetAngle: customTarget !== undefined ? customTarget : state.targetAngle,
-    phase: 'guess' 
+    phase: nextPhase 
   })),
+
+  submitIndividualGuess: (guess) => set((state) => ({
+    individualGuesses: {
+      ...state.individualGuesses,
+      [guess.id]: guess
+    }
+  })),
+
+  setGuessDebatePhase: () => set({ phase: 'guess_debate' }),
+  
+  setGuessAngle: (guessAngle) => set({ guessAngle }),
   
   submitGuess: (guessAngle) => set({ guessAngle, phase: 'reveal' }),
   
@@ -70,7 +84,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (currentTeamIndex !== -1 && currentTeamIndex < state.teams.length - 1) {
       nextTeamIndex = currentTeamIndex + 1;
     }
-    set({ currentTeamId: state.teams[nextTeamIndex]?.id || null });
+    
+    const newTeams = [...state.teams];
+    if (currentTeamIndex !== -1) {
+      newTeams[currentTeamIndex] = {
+        ...newTeams[currentTeamIndex],
+        psychicIndex: (newTeams[currentTeamIndex].psychicIndex || 0) + 1
+      };
+    }
+
+    set({ 
+      currentTeamId: state.teams[nextTeamIndex]?.id || null,
+      teams: newTeams
+    });
     get().startRound();
   },
 
@@ -78,8 +104,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     phase: 'setup',
     teams: [],
     currentTeamId: null,
+    winnerId: null,
     currentCard: null,
     clue: '',
     guessAngle: 90
-  })
+  }),
+  
+  setTeamPsychicIndex: (teamId, index) => set((state) => ({
+    teams: state.teams.map(t => t.id === teamId ? { ...t, psychicIndex: index } : t)
+  })),
+
+  setGameOver: (teamId) => set({ phase: 'game_over', winnerId: teamId })
 }));

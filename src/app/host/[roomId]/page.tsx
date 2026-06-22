@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/Button';
-import { Users, UserPlus, Play, ArrowLeft, X } from 'lucide-react';
+import { Users, UserPlus, Play, ArrowLeft, X, Copy, Check } from 'lucide-react';
 
 interface MockPlayer {
   id: string;
@@ -35,6 +35,20 @@ function HostLobbyContent() {
   const [players, setPlayers] = useState<MockPlayer[]>([]);
   const [teams, setTeams] = useState<MockTeam[]>([]);
   const [joinUrl, setJoinUrl] = useState('');
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(roomId);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(joinUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -123,15 +137,30 @@ function HostLobbyContent() {
         <div className="flex-1 flex flex-col items-center xl:items-start text-center xl:text-left space-y-8">
           <button 
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => {
+              localStorage.removeItem(`wave_room_${roomId}`);
+              localStorage.removeItem(`wave_room_teams_${roomId}`);
+              localStorage.removeItem(`wave_room_config_${roomId}`);
+              localStorage.removeItem(`wave_room_state_${roomId}`);
+              router.push('/');
+            }}
             className="p-3 bg-imperial_blue-300 rounded-full hover:bg-imperial_blue-200 transition-colors self-center xl:self-start mb-4"
           >
             <ArrowLeft className="w-6 h-6 text-white" />
           </button>
 
           <div>
-            <h1 className="text-3xl font-bold text-bright_ocean-800 uppercase tracking-widest mb-2">Room Code</h1>
-            <div className="text-8xl md:text-[9rem] font-black text-cream-500 tracking-widest drop-shadow-[6px_6px_0px_#010f2c]">
+            <h1 className="text-3xl font-bold text-bright_ocean-800 uppercase tracking-widest mb-2 flex items-center justify-center xl:justify-start gap-4">
+              Room Code
+              <button 
+                onClick={handleCopyCode} 
+                className="p-2 bg-imperial_blue-400 hover:bg-bright_ocean-500 text-white rounded-xl transition-colors flex items-center justify-center shadow-[0_4px_0_0_#010f2c] active:translate-y-[2px] active:shadow-none"
+                title="Copy Room Code"
+              >
+                {copiedCode ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              </button>
+            </h1>
+            <div className="text-8xl md:text-[9rem] font-black text-cream-500 tracking-widest drop-shadow-[6px_6px_0px_#010f2c] cursor-pointer" onClick={handleCopyCode}>
               {roomId}
             </div>
           </div>
@@ -148,7 +177,14 @@ function HostLobbyContent() {
           
           <p className="text-2xl font-bold text-imperial_blue-400">
             Scan to join or enter code at <br/>
-            <span className="text-cream-500 underline break-all">{joinUrl.replace('http://', '').replace('https://', '') || '...'}</span>
+            <button 
+              onClick={handleCopyUrl}
+              className="text-cream-500 underline break-all hover:text-white transition-colors flex items-center justify-center xl:justify-start gap-2 mx-auto xl:mx-0 mt-2"
+              title="Copy Link"
+            >
+              {joinUrl.replace('http://', '').replace('https://', '') || '...'}
+              {copiedUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            </button>
           </p>
         </div>
 
