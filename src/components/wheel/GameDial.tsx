@@ -95,7 +95,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
 
   return (
     <div 
-      className="relative w-full max-w-2xl mx-auto flex justify-center items-end drop-shadow-[0px_8px_0px_#010f2c] select-none touch-none"
+      className="relative w-full max-w-2xl mx-auto flex justify-center items-end select-none touch-none"
       onPointerDown={(e) => {
         if (interactive) setIsDragging(true);
       }}
@@ -103,8 +103,10 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
       <svg 
         ref={svgRef}
         viewBox="-10 -10 420 250" 
-        className="w-full h-full max-h-[40vh] md:max-h-[50vh] drop-shadow-2xl"
+        className="w-full h-full max-h-[40vh] md:max-h-[50vh]"
       >
+        <g className="drop-shadow-[0px_8px_0px_#010f2c]">
+          <g className="drop-shadow-2xl">
         {/* Base Semi-Circle */}
         <path 
           d={describeArc(CENTER, 200, RADIUS, 0, 180)} 
@@ -136,14 +138,23 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
             className="opacity-40"
           />
         )}
+          </g>
+        </g>
 
         {/* The Individual Guesses (Faded Pointers) */}
         {individualGuesses && individualGuesses.map((guess) => {
            const labelPos = polarToCartesian(CENTER, 200, RADIUS + 25, guess.angle);
            return (
              <g key={guess.id}>
-               <motion.g animate={{ rotate: guess.angle - 90 }} transition={{ type: "spring", bounce: 0.1, duration: 0.5 }} style={{ originX: 0.5, originY: 1 }}>
-                 <line x1="200" y1="200" x2="200" y2="40" stroke={guess.color || "#ffffff"} strokeWidth="6" strokeLinecap="round" className="opacity-50" />
+               <motion.g animate={{ rotate: guess.angle - 90 }} transition={{ type: "spring", bounce: 0.1, duration: 0.5 }} style={{ originX: 210/420, originY: 210/250 }}>
+                 {/* Pointer line */}
+                 <line x1="200" y1="200" x2="200" y2="40" stroke="#010f2c" strokeWidth="10" strokeLinecap="round" />
+                 {/* Pointer needle tip */}
+                 <circle cx="200" cy="40" r="8" fill={guess.color || "#ffffff"} className="drop-shadow-sm" />
+                 {/* Pointer base pivot (Dark) */}
+                 <circle cx="200" cy="200" r="32" fill="#010f2c" />
+                 {/* Pointer base pivot (White/Cream center) */}
+                 <circle cx="200" cy="200" r="16" fill="#ebefbf" />
                </motion.g>
                <motion.text 
                  animate={{ x: labelPos.x, y: labelPos.y }}
@@ -153,7 +164,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
                  fill={guess.color || "#ffffff"} 
                  fontSize="12" 
                  fontWeight="black" 
-                 className="drop-shadow-md uppercase"
+                 className="uppercase"
                >
                  {guess.name}
                </motion.text>

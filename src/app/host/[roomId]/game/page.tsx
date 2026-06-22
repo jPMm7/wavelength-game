@@ -6,7 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 import { GameDial } from '@/components/wheel/GameDial';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { ArrowRight, X, Clock, EyeOff, Users, FastForward, Settings, Minus, Plus, SkipForward, Crown, Home, Trophy, RefreshCcw } from 'lucide-react';
+import { ArrowRight, X, Clock, EyeOff, Users, FastForward, Settings, Minus, Plus, SkipForward, Crown, Home, Trophy, RefreshCcw, CheckCircle2, ShieldQuestion } from 'lucide-react';
 import { Confetti } from '@/components/ui/Confetti';
 
 function HostGameContent() {
@@ -82,6 +82,32 @@ function HostGameContent() {
       if (!e.newValue) return;
       
       try {
+        if (e.key === `wave_room_${roomId}`) {
+          const updatedPlayers = JSON.parse(e.newValue);
+          setPlayers(updatedPlayers);
+          
+          if (store.mode === 'solo') {
+            const soloTeams = updatedPlayers.map((p: any, i: number) => ({
+              id: p.id,
+              name: p.name,
+              color: [
+                'bg-bright_ocean-500 border-bright_ocean-300',
+                'bg-imperial_blue-500 border-imperial_blue-300',
+                'bg-frosted_mint-500 border-frosted_mint-300',
+                'bg-red-500 border-red-300',
+                'bg-yellow-500 border-yellow-300',
+                'bg-purple-500 border-purple-300'
+              ][i % 6]
+            }));
+            store.syncTeams(soloTeams);
+          }
+        }
+        
+        if (e.key === `wave_room_teams_${roomId}` && store.mode === 'team') {
+          const updatedTeams = JSON.parse(e.newValue);
+          store.syncTeams(updatedTeams);
+        }
+
         if (e.key === `wave_room_clue_${roomId}` && store.phase === 'clue') {
           const payload = JSON.parse(e.newValue);
           store.submitClue(payload.clue, payload.targetAngle, 'guess_blind');
@@ -91,17 +117,10 @@ function HostGameContent() {
           const payload = JSON.parse(e.newValue);
           store.submitIndividualGuess(payload);
         }
-        
-        if (e.key === `wave_room_guess_${roomId}` && store.phase === 'guess_debate') {
+
+        if (e.key === `wave_room_team_guess_${roomId}` && store.phase === 'guess_debate') {
           const payload = JSON.parse(e.newValue);
-          store.setGuessAngle(payload.angle);
-        }
-        
-        if (e.key === `wave_room_action_${roomId}`) {
-          const action = JSON.parse(e.newValue);
-          if (action.type === 'LOCK_GUESS' && store.phase === 'guess_debate') {
-            store.submitGuess(store.guessAngle);
-          }
+          store.submitTeamGuess(payload);
         }
       } catch (err) {
         console.error('Failed to parse incoming action', err);
@@ -112,10 +131,11 @@ function HostGameContent() {
     return () => window.removeEventListener('storage', handleStorage);
   }, [isInitialized, roomId, store]);
 
-  // Auto-advance logic for guess_blind
+  // Auto-advance logic for guess_blind and guess_debate
   useEffect(() => {
+    const currentTeam = store.teams.find(t => t.id === store.currentTeamId);
+
     if (store.phase === 'guess_blind') {
-      const currentTeam = store.teams.find(t => t.id === store.currentTeamId);
       const guessingPlayers = store.mode === 'solo' 
         ? players.filter(p => p.id !== currentTeam?.id)
         : players.filter(p => p.teamId !== currentTeam?.id);
@@ -124,13 +144,21 @@ function HostGameContent() {
       
       if (Object.keys(store.individualGuesses).length >= numGuessers) {
         if (store.mode === 'solo') {
-          store.submitGuess(90); // Dummy guess to trigger reveal
+          store.submitGuess(90); // Points come from individualGuesses
         } else {
-          store.setGuessDebatePhase();
+          store.setGuessDebatePhase(); // Move to Debate Phase
         }
       }
     }
-  }, [store.phase, store.individualGuesses, store.teams, store.currentTeamId, players, store]);
+
+    if (store.phase === 'guess_debate') {
+      const numGuessingTeams = Math.max(1, store.teams.filter(t => t.id !== currentTeam?.id).length);
+      
+      if (Object.keys(store.teamGuesses).length >= numGuessingTeams) {
+        store.submitGuess(90); // Points come from teamGuesses
+      }
+    }
+  }, [store.phase, store.individualGuesses, store.teamGuesses, store.teams, store.currentTeamId, players, store]);
 
 
   if (!isInitialized || !store.currentCard || !store.teams.length) {
@@ -143,7 +171,9 @@ function HostGameContent() {
     : players.filter(p => p.teamId !== currentTeam?.id);
   const numGuessers = Math.max(1, guessingPlayers.length);
   const submittedCount = Object.keys(store.individualGuesses).length;
-  const individualGuessesArray = Object.values(store.individualGuesses);
+  // Derive individual guesses array for Solo mode
+  const individualGuessesArray = Object.values(store.individualGuesses || {})
+    .filter((g: any, index, self) => self.findIndex(t => t.name === g.name) === index);
 
   const handleMakeLeader = (teamId: string, playerId: string) => {
     const teamPlayers = players.filter(p => p.teamId === teamId);
@@ -274,64 +304,6 @@ function HostGameContent() {
           </div>
         )}
 
-        {/* Phase: Guess Blind (Individual Secret Guesses) */}
-        {store.phase === 'guess_blind' && (
-          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
-              <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Is:</h2>
-              <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{store.clue}"</p>
-            </div>
-
-            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col items-center justify-center">
-              <Users className="w-24 h-24 text-bright_ocean-500 mb-6 drop-shadow-[0_4px_0_rgba(0,0,0,0.3)] animate-pulse" />
-              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-widest text-center mb-4">
-                Secret Input
-              </h2>
-              <p className="text-xl md:text-2xl font-bold text-cream-500 text-center max-w-lg mb-8">
-                {currentTeam?.name}, check your devices and lock in your individual guesses!
-              </p>
-              
-              <div className="bg-imperial_blue-500/50 px-8 py-4 rounded-full border-4 border-imperial_blue-300 shadow-inner flex items-center gap-4">
-                <span className="text-2xl font-bold text-bright_ocean-500 uppercase">Ready:</span>
-                <span className="text-4xl font-black text-white tracking-widest">{submittedCount} / {numGuessers}</span>
-              </div>
-            </div>
-            
-            <div className="flex justify-center shrink-0">
-              <button 
-                onClick={() => store.setGuessDebatePhase()}
-                className="text-white/50 hover:text-white flex items-center gap-2 font-bold uppercase tracking-widest transition-colors"
-              >
-                <FastForward className="w-5 h-5" /> Force Reveal
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Phase: Guess Debate (Cluster + Captain's Wheel) */}
-        {store.phase === 'guess_debate' && (
-          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in zoom-in duration-500">
-            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
-              <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Is:</h2>
-              <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{store.clue}"</p>
-            </div>
-
-            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
-              <h2 className="text-xl md:text-2xl font-black text-cream-500 mb-4 md:mb-6 uppercase tracking-widest text-center shrink-0 animate-pulse">
-                Debate! The Captain is driving...
-              </h2>
-              <div className="flex-1 min-h-0 flex items-center justify-center">
-                <GameDial 
-                  targetAngle={store.targetAngle} 
-                  guessAngle={store.guessAngle} 
-                  shutterOpen={false} 
-                  interactive={false}
-                  individualGuesses={individualGuessesArray}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Phase: Reveal */}
         {store.phase === 'reveal' && (
@@ -342,34 +314,31 @@ function HostGameContent() {
             </div>
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
-              <div className="mb-4 md:mb-6 flex justify-center shrink-0">
-                {store.mode === 'solo' ? (
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {individualGuessesArray.map(guess => {
-                      const pts = calculatePoints(store.targetAngle, guess.angle);
-                      return pts > 0 ? (
-                        <div key={guess.id} className="px-4 py-2 bg-frosted_mint-500 border-2 border-frosted_mint-300 rounded-xl shadow-[0_2px_0_0_#010f2c]">
-                          <span className="font-bold text-imperial_blue-800 uppercase">{guess.name}: +{pts}</span>
-                        </div>
-                      ) : null;
-                    })}
-                  </div>
-                ) : (
-                  <div className={`px-6 py-2 md:px-8 md:py-3 rounded-2xl border-4 shadow-[0_4px_0_0_#010f2c] ${calculatePoints(store.targetAngle, store.guessAngle) > 0 ? 'bg-frosted_mint-500 border-frosted_mint-300' : 'bg-red-500 border-red-300'}`}>
-                    <h2 className="text-2xl md:text-4xl font-black text-imperial_blue-800 uppercase tracking-widest text-center drop-shadow-sm">
-                      +{calculatePoints(store.targetAngle, store.guessAngle)} Points!
-                    </h2>
+              <div className="mb-4 md:mb-6 flex flex-col justify-center shrink-0 items-center gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
+                  {(store.mode === 'solo' ? individualGuessesArray : Object.values(store.teamGuesses || {})).map(guess => {
+                    const pts = calculatePoints(store.targetAngle, guess.angle);
+                    return pts > 0 ? (
+                      <div key={guess.id} className="px-4 py-2 bg-frosted_mint-500 border-2 border-frosted_mint-300 rounded-xl shadow-[0_2px_0_0_#010f2c]">
+                        <span className="font-bold text-imperial_blue-800 uppercase">{guess.name}: +{pts}</span>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+                {store.mode === 'team' && Object.values(store.teamGuesses || {}).some((g: any) => calculatePoints(store.targetAngle, g.angle) > 0) && (
+                  <div className="px-4 py-2 bg-bright_ocean-500 border-2 border-bright_ocean-300 rounded-xl shadow-[0_2px_0_0_#010f2c] mt-2">
+                    <span className="font-bold text-white uppercase">{store.teams.find(t => t.id === store.currentTeamId)?.name} (Psychic): +{Object.values(store.teamGuesses || {}).filter((g: any) => calculatePoints(store.targetAngle, g.angle) > 0).length}</span>
                   </div>
                 )}
               </div>
               <div className="flex-1 min-h-0 flex items-center justify-center">
                 <GameDial 
                   targetAngle={store.targetAngle} 
-                  guessAngle={store.guessAngle} 
+                  guessAngle={90} 
                   shutterOpen={true} 
                   interactive={false} 
-                  individualGuesses={store.mode === 'solo' ? individualGuessesArray : undefined}
-                  hideMainPointer={store.mode === 'solo'}
+                  individualGuesses={store.mode === 'solo' ? individualGuessesArray : Object.values(store.teamGuesses || {})}
+                  hideMainPointer={true}
                 />
               </div>
             </div>
@@ -382,6 +351,77 @@ function HostGameContent() {
             >
               Next Round <ArrowRight className="w-8 h-8 ml-2" />
             </Button>
+          </div>
+        )}
+
+        {/* Phase: Guess Blind (Individual Secret Guesses) */}
+        {store.phase === 'guess_blind' && (
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
+              <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Is:</h2>
+              <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{store.clue}"</p>
+            </div>
+
+            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col items-center justify-center">
+              <Users className="w-24 h-24 text-bright_ocean-500 mb-6 drop-shadow-[0_4px_0_rgba(0,0,0,0.3)] animate-pulse" />
+              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-widest text-center mb-4">
+                Secret Guesses
+              </h2>
+              <p className="text-xl md:text-2xl font-bold text-cream-500 text-center max-w-lg mb-8">
+                Everyone check your devices and lock in your individual guesses!
+              </p>
+              
+              <div className="bg-imperial_blue-500/50 px-8 py-4 rounded-full border-4 border-imperial_blue-300 shadow-inner flex items-center gap-4">
+                <span className="text-2xl font-bold text-bright_ocean-500 uppercase">Ready:</span>
+                <span className="text-4xl font-black text-white tracking-widest">
+                  {Object.keys(store.individualGuesses).length} / {store.mode === 'solo' ? Math.max(1, players.filter(p => p.id !== currentTeam?.id).length) : Math.max(1, players.filter(p => p.teamId !== currentTeam?.id).length)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Phase: Guess Debate (Team Captains) */}
+        {store.phase === 'guess_debate' && (
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-700">
+            <div className="bg-imperial_blue-400 p-6 md:p-8 rounded-[2rem] border-4 border-imperial_blue-300 shadow-[0_8px_0_0_#010f2c] flex flex-col items-center justify-center shrink-0">
+              <h2 className="text-xl md:text-3xl font-black text-white uppercase tracking-widest mb-2 flex items-center gap-3">
+                <Users className="w-8 h-8 md:w-10 md:h-10 text-yellow-400 animate-pulse" /> Team Debate
+              </h2>
+              <p className="text-lg md:text-xl text-cream-500 font-bold uppercase tracking-widest text-center max-w-2xl">
+                Discuss with your team! Captains, lock in the final guess on your phone.
+              </p>
+            </div>
+
+            <div className="flex-1 bg-imperial_blue-500 p-6 rounded-[2rem] border-4 border-imperial_blue-400 shadow-inner flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent animate-pulse duration-1000"></div>
+              
+              <div className="relative z-10 flex flex-wrap justify-center gap-4 md:gap-8 max-w-4xl">
+                {store.teams.filter(t => t.id !== store.currentTeamId).map(team => {
+                  const hasGuessed = !!store.teamGuesses[team.id];
+                  const tColor = team.color?.split(' ')[0].replace('bg-', '') || 'white';
+                  const hexColor = tColor.includes('bright_ocean') ? '#1a8fe3' :
+                                   tColor.includes('imperial_blue') ? '#010f2c' :
+                                   tColor.includes('frosted_mint') ? '#eaf7cf' :
+                                   tColor.includes('red') ? '#ef4444' :
+                                   tColor.includes('yellow') ? '#eab308' :
+                                   tColor.includes('purple') ? '#a855f7' : '#ffffff';
+
+                  return (
+                    <div key={team.id} className={`flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl border-4 transition-all duration-500 ${hasGuessed ? 'bg-imperial_blue-400 border-frosted_mint-500 shadow-[0_0_30px_rgba(234,247,207,0.5)] scale-110' : 'bg-imperial_blue-600 border-imperial_blue-300 opacity-50 scale-95'}`}>
+                      {hasGuessed ? (
+                        <CheckCircle2 className="w-16 h-16 md:w-20 md:h-20 text-frosted_mint-500 mb-4 animate-bounce" />
+                      ) : (
+                        <Clock className="w-16 h-16 md:w-20 md:h-20 text-white/30 mb-4 animate-spin-slow" />
+                      )}
+                      <span className="text-xl md:text-2xl font-black uppercase tracking-widest" style={{ color: hasGuessed ? hexColor : 'rgba(255,255,255,0.3)' }}>
+                        {team.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -464,7 +504,7 @@ function HostGameContent() {
               <div className="bg-imperial_blue-400 p-4 rounded-xl border-2 border-imperial_blue-300 space-y-4">
                 <h4 className="text-xs font-bold text-cream-500 uppercase tracking-widest text-center">Force Phase</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {['clue', 'guess_blind', 'guess_debate', 'reveal'].map(p => (
+                  {['clue', 'guess_blind', 'reveal'].map(p => (
                     <button 
                       key={p}
                       onClick={() => handleForcePhase(p)}

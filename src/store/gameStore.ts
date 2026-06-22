@@ -25,6 +25,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   clue: '',
   guessAngle: 90,
   individualGuesses: {},
+  teamGuesses: {},
 
   setGameConfig: (mode, teams, targetScore) => {
     set({
@@ -36,18 +37,35 @@ export const useGameStore = create<GameState>((set, get) => ({
     get().startRound();
   },
   
+  syncTeams: (newTeams) => set((state) => {
+    const updatedTeams = [...state.teams];
+    let changed = false;
+    newTeams.forEach(nt => {
+      if (!updatedTeams.find(t => t.id === nt.id)) {
+        updatedTeams.push({
+          ...nt,
+          score: 0,
+          psychicIndex: 0
+        });
+        changed = true;
+      }
+    });
+    return changed ? { teams: updatedTeams } : {};
+  }),
+  
   startRound: () => {
     // Generate random target angle between 20 and 160 degrees
     const targetAngle = Math.floor(Math.random() * 140) + 20;
     const currentCard = MOCK_CARDS[Math.floor(Math.random() * MOCK_CARDS.length)];
     
-    set({
+    set({ 
+      phase: 'clue', 
       targetAngle,
       currentCard,
-      clue: '',
+      clue: '', 
       guessAngle: 90,
       individualGuesses: {},
-      phase: 'clue'
+      teamGuesses: {}
     });
   },
 
@@ -67,8 +85,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   })),
 
   setGuessDebatePhase: () => set({ phase: 'guess_debate' }),
-  
-  setGuessAngle: (guessAngle) => set({ guessAngle }),
+
+  submitTeamGuess: (guess) => set((state) => ({
+    teamGuesses: {
+      ...state.teamGuesses,
+      [guess.id]: guess
+    }
+  })),
   
   submitGuess: (guessAngle) => set((state) => {
     const calculatePoints = (target: number, guess: number) => {
@@ -81,24 +104,26 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const newState: Partial<GameState> = { guessAngle, phase: 'reveal' };
     const newTeams = [...state.teams];
+    let psychicPoints = 0;
     
-    if (state.mode === 'solo') {
-      Object.values(state.individualGuesses).forEach(guess => {
-        const points = calculatePoints(state.targetAngle, guess.angle);
-        if (points > 0) {
-          const teamIndex = newTeams.findIndex(t => t.id === guess.id);
-          if (teamIndex !== -1) {
-            newTeams[teamIndex] = { ...newTeams[teamIndex], score: newTeams[teamIndex].score + points };
-          }
-        }
-      });
-    } else {
-      const points = calculatePoints(state.targetAngle, guessAngle);
+    const guessesToScore = state.mode === 'solo' ? state.individualGuesses : state.teamGuesses;
+    
+    Object.values(guessesToScore).forEach(guess => {
+      const points = calculatePoints(state.targetAngle, guess.angle);
       if (points > 0) {
-        const teamIndex = newTeams.findIndex(t => t.id === state.currentTeamId);
+        const teamIndex = newTeams.findIndex(t => t.id === guess.id);
         if (teamIndex !== -1) {
           newTeams[teamIndex] = { ...newTeams[teamIndex], score: newTeams[teamIndex].score + points };
         }
+        psychicPoints += 1;
+      }
+    });
+
+    // In Team mode, the Psychic team gets 1 point per guessing team that scored points
+    if (state.mode === 'team' && psychicPoints > 0) {
+      const psychicTeamIndex = newTeams.findIndex(t => t.id === state.currentTeamId);
+      if (psychicTeamIndex !== -1) {
+        newTeams[psychicTeamIndex] = { ...newTeams[psychicTeamIndex], score: newTeams[psychicTeamIndex].score + psychicPoints };
       }
     }
     

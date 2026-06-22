@@ -48,16 +48,27 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
     : players.filter((p:any) => p.teamId !== currentTeam?.id);
   const myIndexInGuessers = guessingPlayers.findIndex((p:any) => p.id === myId);
 
-  // The Captain is mathematically chosen from the guessing players
+  const myTeamPlayers = masterState.mode === 'solo'
+    ? players.filter((p:any) => p.id === myId)
+    : players.filter((p:any) => p.teamId === myTeamId);
+  const myIndexInMyTeam = myTeamPlayers.findIndex((p:any) => p.id === myId);
+
+  // The Captain is exactly one player per non-Psychic team
   const isCaptain = masterState.mode === 'solo'
-    ? false
-    : isGuesser && guessingPlayers.length > 0 &&
-      (guessingPlayers.length === 1 ? true : ((currentTeam?.psychicIndex || 0) % guessingPlayers.length) === myIndexInGuessers);
+    ? isGuesser // In solo, every guesser is their own captain
+    : isGuesser && myTeamPlayers.length > 0 && 
+      ((myPlayerTeam?.psychicIndex || 0) % myTeamPlayers.length) === myIndexInMyTeam;
 
   const [clueInput, setClueInput] = useState('');
   const [localTarget, setLocalTarget] = useState(90);
   const [localGuess, setLocalGuess] = useState(90);
   const [hasSubmittedBlind, setHasSubmittedBlind] = useState(false);
+  const [hasSubmittedTeam, setHasSubmittedTeam] = useState(false);
+
+  // Derive individual guesses array for the GameDial
+  const myTeamIndividualGuesses = Object.values(masterState.individualGuesses || {})
+    .filter((g: any) => myTeamPlayers.some((p:any) => p.id === g.id))
+    .filter((g: any, index, self) => self.findIndex(t => t.name === g.name) === index);
 
   // Sync states
   useEffect(() => {
@@ -68,6 +79,9 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
     if (masterState.phase === 'guess_blind') {
       setLocalGuess(90);
       setHasSubmittedBlind(false);
+    }
+    if (masterState.phase === 'guess_debate') {
+      setHasSubmittedTeam(false);
     }
   }, [masterState.phase, masterState.targetAngle]);
 
@@ -88,11 +102,41 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
 
   const handleSubmitBlindGuess = () => {
     setHasSubmittedBlind(true);
+    
+    const guessColor = myPlayerTeam?.color?.split(' ')[0].replace('bg-', '') || 'white';
+    
+    const hexColor = guessColor.includes('bright_ocean') ? '#1a8fe3' :
+                     guessColor.includes('imperial_blue') ? '#010f2c' :
+                     guessColor.includes('frosted_mint') ? '#eaf7cf' :
+                     guessColor.includes('red') ? '#ef4444' :
+                     guessColor.includes('yellow') ? '#eab308' :
+                     guessColor.includes('purple') ? '#a855f7' : '#ffffff';
+                     
     localStorage.setItem(`wave_room_secret_guess_${roomId}`, JSON.stringify({
       id: myId,
       name: myPlayer?.name || 'Player',
       angle: localGuess,
-      color: '#ffffff',
+      color: hexColor,
+      ts: Date.now()
+    }));
+  };
+
+  const handleSubmitTeamGuess = () => {
+    setHasSubmittedTeam(true);
+    
+    const guessColor = myPlayerTeam?.color?.split(' ')[0].replace('bg-', '') || 'white';
+    const hexColor = guessColor.includes('bright_ocean') ? '#1a8fe3' :
+                     guessColor.includes('imperial_blue') ? '#010f2c' :
+                     guessColor.includes('frosted_mint') ? '#eaf7cf' :
+                     guessColor.includes('red') ? '#ef4444' :
+                     guessColor.includes('yellow') ? '#eab308' :
+                     guessColor.includes('purple') ? '#a855f7' : '#ffffff';
+                     
+    localStorage.setItem(`wave_room_team_guess_${roomId}`, JSON.stringify({
+      id: myTeamId,
+      name: myPlayerTeam?.name || 'Team',
+      angle: localGuess,
+      color: hexColor,
       ts: Date.now()
     }));
   };
@@ -115,23 +159,6 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
           <span className={`font-black text-base ${myPlayerTeam?.color?.split(' ')[0].replace('bg-', 'text-') || 'text-bright_ocean-500'}`}>{myPlayerTeam?.name}</span>
         </div>
       </div>
-      
-      {masterState.phase === 'guess_blind' && isGuesser && (
-        <div className="bg-black/20 p-3 rounded-2xl border border-black/10 shadow-inner">
-          <span className="text-white/50 text-[10px] font-bold uppercase tracking-widest block mb-2 leading-tight">Team Submissions</span>
-          <div className="flex flex-wrap gap-2">
-            {guessingPlayers.map((p: any) => {
-              const hasGuessed = !!masterState.individualGuesses?.[p.id];
-              return (
-                <div key={p.id} className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${hasGuessed ? 'bg-frosted_mint-500/20 text-frosted_mint-500' : 'bg-white/10 text-white/50'}`}>
-                  {hasGuessed ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                  {p.name}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -202,7 +229,7 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
               <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
                 <CheckCircle2 className="w-20 h-20 text-frosted_mint-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Locked In</h2>
-                <p className="text-cream-500 font-bold">Waiting for the rest of your team to lock in their guesses...</p>
+                <p className="text-cream-500 font-bold">Waiting for everyone else to lock in their initial guesses...</p>
               </div>
             </div>
           );
@@ -216,7 +243,7 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
             </div>
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
-              <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">Secret Input</h2>
+              <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">Secret Initial Guess</h2>
               <div className="flex-1 min-h-0 flex items-center justify-center">
                 <GameDial interactive={true} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={localGuess} onGuessChange={handleGuessChange} />
               </div>
@@ -233,7 +260,7 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
             <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
               <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Secret Guess Phase</h2>
               <p className="text-cream-500 font-bold">
-                {isPsychic ? "Shh! You can't talk. The opposing team is locking in their blind guesses." : (isMyTeam ? "Waiting for the opposing team to guess." : "Waiting...")}
+                {isPsychic ? "Shh! You can't talk. The opposing teams are locking in their initial blind guesses." : "Waiting for the opposing teams to guess."}
               </p>
             </div>
           </div>
@@ -243,50 +270,56 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
 
     if (masterState.phase === 'guess_debate') {
       if (isGuesser) {
-        if (isCaptain) {
+        if (!isCaptain) {
           return (
-            <div className="flex-1 flex flex-col min-h-0 space-y-4">
-              <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
-                <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">You Are The Captain!</h2>
-                <p className="text-xl font-black text-imperial_blue-800 uppercase leading-tight">Debate, then lock it in.</p>
-              </div>
-
-              <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
-                <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">Drive the Needle</h2>
-                <div className="flex-1 min-h-0 flex items-center justify-center">
-                  <GameDial interactive={true} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={localGuess} onGuessChange={handleGuessChange} individualGuesses={individualGuessesArray as any} />
-                </div>
-              </div>
-              
-              <Button variant="accent" size="xl" className="w-full py-6 text-2xl shrink-0" onClick={handleLockGuess}>
-                Lock It In
-              </Button>
-            </div>
-          );
-        } else {
-          return (
-            <div className="flex-1 flex flex-col min-h-0 space-y-4">
-              <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
-                <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">Debate Phase</h2>
-                <p className="text-xl font-black text-imperial_blue-800 uppercase leading-tight">Persuade the Captain!</p>
-              </div>
-
-              <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
-                <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">The Captain is Driving</h2>
-                <div className="flex-1 min-h-0 flex items-center justify-center pointer-events-none">
-                  <GameDial interactive={false} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={masterState.guessAngle} individualGuesses={individualGuessesArray as any} />
-                </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Team Debate</h2>
+                <p className="text-cream-500 font-bold mb-4">Discuss your initial guesses with your team!</p>
+                <p className="text-bright_ocean-300 text-sm italic">The Team Captain is deciding the final guess on their phone.</p>
               </div>
             </div>
           );
         }
+
+        if (hasSubmittedTeam) {
+          return (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
+                <CheckCircle2 className="w-20 h-20 text-frosted_mint-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Team Guess Locked In</h2>
+                <p className="text-cream-500 font-bold">Waiting for other teams to finish debating...</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex-1 flex flex-col min-h-0 space-y-4">
+            <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
+              <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">You Are The Captain!</h2>
+              <p className="text-lg font-black text-imperial_blue-800 uppercase leading-tight">Discuss with your team, then lock it in.</p>
+            </div>
+
+            <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
+              <h2 className="text-xs font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">{myTeamPlayers.length > 1 ? "Your Team's Initial Guesses" : "Your Initial Guess"}</h2>
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <GameDial interactive={true} shutterOpen={false} targetAngle={masterState.targetAngle} guessAngle={localGuess} onGuessChange={handleGuessChange} individualGuesses={myTeamIndividualGuesses as any} />
+              </div>
+            </div>
+            
+            <Button variant="accent" size="xl" className="w-full py-6 text-2xl shrink-0" onClick={handleSubmitTeamGuess}>
+              Lock In Team Guess
+            </Button>
+          </div>
+        );
       } else {
         return (
           <div className="flex-1 flex items-center justify-center">
             <div className="bg-imperial_blue-400 p-8 rounded-3xl border-4 border-imperial_blue-300 shadow-[8px_8px_0px_0px_#010f2c] text-center w-full animate-in fade-in zoom-in duration-500">
               <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Debate Phase</h2>
               <p className="text-cream-500 font-bold">
-                {isPsychic ? "Shh! You can't talk. Listen to the opposing team argue!" : (isMyTeam ? "Watch the opposing team debate!" : "Waiting...")}
+                {isPsychic ? "Shh! You can't talk. Listen to the opposing teams argue!" : "Watch the opposing teams debate!"}
               </p>
             </div>
           </div>

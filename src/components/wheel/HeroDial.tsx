@@ -7,12 +7,20 @@ export function HeroDial() {
   const controls = useAnimation();
 
   useEffect(() => {
+    let isMounted = true;
+    
     const runAnimation = async () => {
       // 1. Initial springy entrance
-      await controls.start({
-        rotate: [-80, 20, -10, 5, 0],
-        transition: { duration: 2, ease: "easeOut", delay: 0.2 }
-      });
+      try {
+        await controls.start({
+          rotate: [-80, 20, -10, 5, 0],
+          transition: { duration: 2, ease: "easeOut", delay: 0.2 }
+        });
+      } catch (e) {
+        // Ignore animation cancelation errors
+      }
+      
+      if (!isMounted) return;
       
       // 2. Continuous unpredictable, calm sway with wider range
       controls.start({
@@ -23,10 +31,15 @@ export function HeroDial() {
           repeat: Infinity,
           repeatType: "mirror"
         }
-      });
+      }).catch(() => {});
     };
     
     runAnimation();
+    
+    return () => {
+      isMounted = false;
+      controls.stop();
+    };
   }, [controls]);
 
   // SVG arc calculation helper

@@ -35,15 +35,17 @@ export interface GameState {
   clue: string;
   guessAngle: number; // 0 to 180
   individualGuesses: Record<string, IndividualGuess>;
+  teamGuesses: Record<string, IndividualGuess>;
   
   // Actions
   setGameConfig: (mode: GameMode, teams: Team[], targetScore: number) => void;
+  syncTeams: (teams: any[]) => void;
   setPhase: (phase: GamePhase) => void;
   startRound: () => void;
   submitClue: (clue: string, customTarget?: number, nextPhase?: GamePhase) => void;
   submitIndividualGuess: (guess: IndividualGuess) => void;
   setGuessDebatePhase: () => void;
-  setGuessAngle: (angle: number) => void;
+  submitTeamGuess: (guess: IndividualGuess) => void;
   submitGuess: (angle: number) => void;
   addScore: (teamId: string, points: number) => void;
   nextTurn: () => void;
