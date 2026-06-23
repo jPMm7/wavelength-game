@@ -31,18 +31,18 @@ export default function Home() {
         
         {/* Left Side: Hero Section (Title + Graphic + Subtitle) */}
         <div className="flex-1 text-center xl:text-left flex flex-col items-center xl:items-start w-full">
-          <div className="inline-block relative z-10 mx-auto xl:mx-0">
-            <h1 className="text-6xl md:text-8xl xl:text-[8rem] font-black text-cream-500 tracking-tight drop-shadow-[4px_4px_0px_#010f2c] xl:drop-shadow-[8px_8px_0px_#010f2c] rotate-[-2deg]">
+          <div className="relative z-10 w-full flex justify-center xl:justify-start">
+            <h1 className="text-[12vw] sm:text-6xl md:text-8xl xl:text-[8rem] font-black text-cream-500 tracking-tight drop-shadow-[4px_4px_0px_#010f2c] xl:drop-shadow-[8px_8px_0px_#010f2c] rotate-[-2deg] text-center xl:text-left">
               WAVELENGTH
             </h1>
           </div>
 
           {/* Animated Hero Graphic */}
-          <div className="w-full max-w-md md:max-w-xl xl:max-w-2xl -mt-4 xl:-mt-8 z-0">
+          <div className="w-full max-w-md md:max-w-xl xl:max-w-2xl -mt-4 xl:-mt-8 z-0 flex justify-center xl:justify-start">
             <HeroDial />
           </div>
 
-          <p className="text-xl md:text-2xl xl:text-3xl text-bright_ocean-800 font-bold max-w-lg xl:max-w-2xl mx-auto xl:mx-0 -mt-8 xl:-mt-12 relative z-10">
+          <p className="text-lg sm:text-xl md:text-2xl xl:text-3xl text-bright_ocean-800 font-bold max-w-lg xl:max-w-2xl mx-auto xl:mx-0 -mt-8 xl:-mt-12 relative z-10 text-center xl:text-left px-4 xl:px-0">
             A social party game of telepathy, empathy, and perspective.
           </p>
         </div>
