@@ -23,15 +23,19 @@ export function HeroDial() {
       if (!isMounted) return;
       
       // 2. Continuous unpredictable, calm sway with wider range
-      controls.start({
-        rotate: [0, -45, 15, -10, 55, -25, -5, 40, -50, 20, -15, 35, 0],
-        transition: {
-          duration: 35,
-          ease: "easeInOut",
-          repeat: Infinity,
-          repeatType: "mirror"
-        }
-      }).catch(() => {});
+      try {
+        await controls.start({
+          rotate: [0, -45, 15, -10, 55, -25, -5, 40, -50, 20, -15, 35, 0],
+          transition: {
+            duration: 35,
+            ease: "easeInOut",
+            repeat: Infinity,
+            repeatType: "mirror"
+          }
+        });
+      } catch (e) {
+        // Ignore unmounted errors
+      }
     };
     
     runAnimation();

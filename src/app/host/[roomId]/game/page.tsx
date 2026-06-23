@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useRoomSync } from '@/hooks/useRoomSync';
 import { useGameStore } from '@/store/gameStore';
 import { GameDial } from '@/components/wheel/GameDial';
 import { Button } from '@/components/ui/Button';
@@ -48,9 +49,11 @@ function HostGameContent() {
     }
   }, [roomId, isInitialized, store, router]);
 
+  const { channel, isConnected, broadcastMessage } = useRoomSync(roomId);
+
   // Broadcast Master State
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !isConnected) return;
     
     const masterState = {
       mode: store.mode,
@@ -67,69 +70,67 @@ function HostGameContent() {
     };
     
     localStorage.setItem(`wave_room_state_${roomId}`, JSON.stringify(masterState));
+    broadcastMessage('GAME_STATE', { masterState, players, config: { mode: store.mode } });
   }, [
-    isInitialized, roomId, 
-    store.phase, store.teams, store.currentTeamId, 
+    isInitialized, isConnected, roomId, players,
+    store.mode, store.phase, store.teams, store.currentTeamId, 
     store.currentCard, store.targetAngle, store.clue, 
     store.guessAngle, store.targetScore, store.individualGuesses, store.winnerId
   ]);
 
+  const playersRef = useRef(players);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
   // Listen for actions from Player Phones
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !channel) return;
     
-    const handleStorage = (e: StorageEvent) => {
-      if (!e.newValue) return;
+    const handleBroadcast = (payload: any) => {
+      const { event, payload: data } = payload;
+      const currentState = useGameStore.getState();
       
-      try {
-        if (e.key === `wave_room_${roomId}`) {
-          const updatedPlayers = JSON.parse(e.newValue);
-          setPlayers(updatedPlayers);
-          
-          if (store.mode === 'solo') {
-            const soloTeams = updatedPlayers.map((p: any, i: number) => ({
-              id: p.id,
-              name: p.name,
-              color: [
-                'bg-bright_ocean-500 border-bright_ocean-300',
-                'bg-imperial_blue-500 border-imperial_blue-300',
-                'bg-frosted_mint-500 border-frosted_mint-300',
-                'bg-red-500 border-red-300',
-                'bg-yellow-500 border-yellow-300',
-                'bg-purple-500 border-purple-300'
-              ][i % 6]
-            }));
-            store.syncTeams(soloTeams);
-          }
-        }
-        
-        if (e.key === `wave_room_teams_${roomId}` && store.mode === 'team') {
-          const updatedTeams = JSON.parse(e.newValue);
-          store.syncTeams(updatedTeams);
-        }
-
-        if (e.key === `wave_room_clue_${roomId}` && store.phase === 'clue') {
-          const payload = JSON.parse(e.newValue);
-          store.submitClue(payload.clue, payload.targetAngle, 'guess_blind');
-        }
-        
-        if (e.key === `wave_room_secret_guess_${roomId}` && store.phase === 'guess_blind') {
-          const payload = JSON.parse(e.newValue);
-          store.submitIndividualGuess(payload);
-        }
-
-        if (e.key === `wave_room_team_guess_${roomId}` && store.phase === 'guess_debate') {
-          const payload = JSON.parse(e.newValue);
-          store.submitTeamGuess(payload);
-        }
-      } catch (err) {
-        console.error('Failed to parse incoming action', err);
+      if (event === 'REQUEST_STATE') {
+        const masterState = {
+          mode: currentState.mode,
+          phase: currentState.phase,
+          teams: currentState.teams,
+          currentTeamId: currentState.currentTeamId,
+          currentCard: currentState.currentCard,
+          targetAngle: currentState.targetAngle,
+          clue: currentState.clue,
+          guessAngle: currentState.guessAngle,
+          targetScore: currentState.targetScore,
+          individualGuesses: currentState.individualGuesses,
+          winnerId: currentState.winnerId
+        };
+        broadcastMessage('GAME_STATE', { masterState, players: playersRef.current, config: { mode: currentState.mode } });
+      } else if (event === 'SUBMIT_CLUE' && currentState.phase === 'clue') {
+        currentState.submitClue(data.clue, data.targetAngle, 'guess_blind');
+      } else if (event === 'SUBMIT_SECRET_GUESS' && currentState.phase === 'guess_blind') {
+        currentState.submitIndividualGuess(data);
+      } else if (event === 'SUBMIT_TEAM_GUESS' && currentState.phase === 'guess_debate') {
+        currentState.submitTeamGuess(data);
+      } else if (event === 'PLAYER_JOIN') {
+        // Technically shouldn't happen during game, but just in case
+        setPlayers((prev) => {
+          const exists = prev.find(p => p.id === data.id);
+          const newPlayers = exists ? prev.map(p => p.id === data.id ? data : p) : [...prev, data];
+          localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(newPlayers));
+          return newPlayers;
+        });
+      } else if (event === 'PLAYER_LEAVE') {
+        setPlayers((prev) => {
+          const newPlayers = prev.filter(p => p.id !== data.id);
+          localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(newPlayers));
+          return newPlayers;
+        });
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [isInitialized, roomId, store]);
+    channel.on('broadcast', { event: '*' }, handleBroadcast);
+  }, [isInitialized, roomId, channel]);
 
   // Auto-advance logic for guess_blind and guess_debate
   useEffect(() => {

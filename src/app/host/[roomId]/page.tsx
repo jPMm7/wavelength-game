@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRoomSync } from '@/hooks/useRoomSync';
 import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/Button';
 import { Users, UserPlus, Play, ArrowLeft, X, Copy, Check } from 'lucide-react';
@@ -75,32 +76,58 @@ function HostLobbyContent() {
         setTeams(JSON.parse(storedTeams)); 
       } catch (e) {}
     } else {
-      // Initialize default teams
       if (mode === 'team') {
         setTeams(DEFAULT_TEAMS);
         localStorage.setItem(teamsKey, JSON.stringify(DEFAULT_TEAMS));
       }
     }
+  }, [roomId, mode]);
 
-    // Listen for cross-tab changes
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === playersKey) {
-        if (e.newValue) {
-          try { setPlayers(JSON.parse(e.newValue)); } catch (err) {}
-        } else {
-          setPlayers([]);
-        }
-      }
-      if (e.key === teamsKey) {
-        if (e.newValue) {
-          try { setTeams(JSON.parse(e.newValue)); } catch (err) {}
-        }
+  const { channel, isConnected, broadcastMessage } = useRoomSync(roomId);
+
+  const stateRef = useRef({ players, teams, mode });
+  useEffect(() => {
+    stateRef.current = { players, teams, mode };
+  }, [players, teams, mode]);
+
+  // Broadcast state whenever it changes (or when requested)
+  useEffect(() => {
+    if (isConnected) {
+      broadcastMessage('LOBBY_STATE', { players, teams, mode });
+    }
+  }, [players, teams, mode, isConnected]);
+
+  useEffect(() => {
+    if (!channel) return;
+
+    const handleBroadcast = (payload: any) => {
+      const { event, payload: data } = payload;
+      if (event === 'REQUEST_STATE') {
+        broadcastMessage('LOBBY_STATE', stateRef.current);
+      } else if (event === 'PLAYER_JOIN') {
+        setPlayers((prev) => {
+          const exists = prev.find(p => p.id === data.id);
+          const newPlayers = exists ? prev.map(p => p.id === data.id ? data : p) : [...prev, data];
+          localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(newPlayers));
+          return newPlayers;
+        });
+      } else if (event === 'PLAYER_LEAVE') {
+        setPlayers((prev) => {
+          const newPlayers = prev.filter(p => p.id !== data.id);
+          localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(newPlayers));
+          return newPlayers;
+        });
+      } else if (event === 'TEAM_CREATE') {
+        setTeams((prev) => {
+          const newTeams = [...prev, data];
+          localStorage.setItem(`wave_room_teams_${roomId}`, JSON.stringify(newTeams));
+          return newTeams;
+        });
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [roomId, mode]);
+    channel.on('broadcast', { event: '*' }, handleBroadcast);
+  }, [channel, roomId]);
 
   const updatePlayers = (newPlayers: MockPlayer[]) => {
     setPlayers(newPlayers);
@@ -306,7 +333,9 @@ function HostLobbyContent() {
                   ][i % 6]
                 }));
                 localStorage.setItem(`wave_room_teams_${roomId}`, JSON.stringify(soloTeams));
+                setTeams(soloTeams);
               }
+              broadcastMessage('START_GAME', {});
               router.push(`/host/${roomId}/game`);
             }}
           >

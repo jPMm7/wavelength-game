@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { useRoomSync } from '@/hooks/useRoomSync';
 import { Button } from '@/components/ui/Button';
 import { GameDial } from '@/components/wheel/GameDial';
 import { User, Users, CheckCircle2, ArrowLeft, Plus, EyeOff, MessageCircle, Dices, Clock, RefreshCcw, Crown } from 'lucide-react';
@@ -21,7 +22,12 @@ const TEAM_COLORS = [
   'bg-green-500 border-green-300'
 ];
 
-function PlayerGameController({ roomId, myId, myTeamId, masterState, players, onLeave }: { roomId: string, myId: string, myTeamId: string, masterState: any, players: any[], onLeave: () => void }) {
+const DEFAULT_TEAMS: MockTeam[] = [
+  { id: 'team1', name: 'Pugs', color: 'bg-bright_ocean-500 border-bright_ocean-300' },
+  { id: 'team2', name: 'Dinosaurs', color: 'bg-imperial_blue-500 border-imperial_blue-300' }
+];
+
+function PlayerGameController({ roomId, myId, myTeamId, masterState, players, onLeave, broadcastMessage }: { roomId: string, myId: string, myTeamId: string, masterState: any, players: any[], onLeave: () => void, broadcastMessage: (e: string, p: any) => void }) {
   const isMyTeam = masterState.mode === 'solo' 
     ? myId === masterState.currentTeamId
     : myTeamId === masterState.currentTeamId;
@@ -86,18 +92,15 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
   }, [masterState.phase, masterState.targetAngle]);
 
   const handleLockClue = (clue: string) => {
-    localStorage.setItem(`wave_room_clue_${roomId}`, JSON.stringify({
+    broadcastMessage('SUBMIT_CLUE', {
       clue,
       targetAngle: localTarget,
       ts: Date.now()
-    }));
+    });
   };
 
   const handleGuessChange = (angle: number) => {
     setLocalGuess(angle);
-    if (masterState.phase === 'guess_debate') {
-      localStorage.setItem(`wave_room_guess_${roomId}`, JSON.stringify({ angle, ts: Date.now() }));
-    }
   };
 
   const handleSubmitBlindGuess = () => {
@@ -112,13 +115,13 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
                      guessColor.includes('yellow') ? '#eab308' :
                      guessColor.includes('purple') ? '#a855f7' : '#ffffff';
                      
-    localStorage.setItem(`wave_room_secret_guess_${roomId}`, JSON.stringify({
+    broadcastMessage('SUBMIT_SECRET_GUESS', {
       id: myId,
       name: myPlayer?.name || 'Player',
       angle: localGuess,
       color: hexColor,
       ts: Date.now()
-    }));
+    });
   };
 
   const handleSubmitTeamGuess = () => {
@@ -132,13 +135,13 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
                      guessColor.includes('yellow') ? '#eab308' :
                      guessColor.includes('purple') ? '#a855f7' : '#ffffff';
                      
-    localStorage.setItem(`wave_room_team_guess_${roomId}`, JSON.stringify({
+    broadcastMessage('SUBMIT_TEAM_GUESS', {
       id: myTeamId,
       name: myPlayerTeam?.name || 'Team',
       angle: localGuess,
       color: hexColor,
       ts: Date.now()
-    }));
+    });
   };
 
   const handleLockGuess = () => {
@@ -397,13 +400,16 @@ function PlayJoinContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const roomId = params.roomId as string;
-  const [mode, setMode] = useState<'team' | 'coop' | 'solo'>('team');
+  const urlMode = searchParams.get('mode') as 'team' | 'coop' | 'solo';
+  const initialMode = urlMode || 'team';
+  const [mode, setMode] = useState<'team' | 'coop' | 'solo'>(initialMode);
+  const [hasSynced, setHasSynced] = useState(!!urlMode);
 
   const [name, setName] = useState('');
   const [joinedState, setJoinedState] = useState<'unjoined' | 'coop' | string>('unjoined');
   const [myId, setMyId] = useState<string>('');
   
-  const [teams, setTeams] = useState<MockTeam[]>([]);
+  const [teams, setTeams] = useState<MockTeam[]>(initialMode === 'team' ? DEFAULT_TEAMS : []);
   const [players, setPlayers] = useState<any[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
@@ -413,77 +419,64 @@ function PlayJoinContent() {
     setMyId(Math.random().toString(36).substring(2, 9));
   }, []);
 
-  useEffect(() => {
-    const urlMode = searchParams.get('mode');
-    if (urlMode === 'team' || urlMode === 'coop') {
-      setMode(urlMode);
-    } else if (typeof window !== 'undefined') {
-      try {
-        const config = localStorage.getItem(`wave_room_config_${roomId}`);
-        if (config) setMode(JSON.parse(config).mode);
-      } catch (e) {}
-    }
-  }, [roomId, searchParams]);
+  const { channel, isConnected, broadcastMessage } = useRoomSync(roomId);
 
-  // Sync teams, players, and master state from localStorage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const teamsKey = `wave_room_teams_${roomId}`;
-    const playersKey = `wave_room_${roomId}`;
-    const stateKey = `wave_room_state_${roomId}`;
-    
-    // Initial load
-    try {
-      const storedTeams = localStorage.getItem(teamsKey);
-      if (storedTeams) setTeams(JSON.parse(storedTeams));
-      
-      const storedPlayers = localStorage.getItem(playersKey);
-      if (storedPlayers) setPlayers(JSON.parse(storedPlayers));
-      
-      const ms = localStorage.getItem(stateKey);
-      if (ms) setMasterState(JSON.parse(ms));
-    } catch (e) {}
+    if (!isConnected || hasSynced) return;
 
-    const handleStorage = (e: StorageEvent) => {
-      try {
-        if (e.key === teamsKey && !e.newValue) {
-          router.push('/');
-        }
-        if (e.key === teamsKey && e.newValue) setTeams(JSON.parse(e.newValue));
-        if (e.key === playersKey) {
-          if (e.newValue) {
-            const p = JSON.parse(e.newValue);
-            setPlayers(p);
-            // Auto-kick if missing
-            if (joinedState !== 'unjoined') {
-              const stillIn = p.some((player: any) => player.id === myId);
-              if (!stillIn) setJoinedState('unjoined');
-            }
-          } else {
-            // Room completely disbanded
-            router.push('/');
-          }
-        }
-        if (e.key === stateKey) {
-          if (e.newValue) setMasterState(JSON.parse(e.newValue));
-          else setMasterState(null); // Game ended or reset
-        }
-      } catch (err) {}
+    // Send immediately when connected
+    broadcastMessage('REQUEST_STATE', {});
+
+    // And retry every 2 seconds until the host responds with LOBBY_STATE
+    const interval = setInterval(() => {
+      if (!hasSynced) {
+        broadcastMessage('REQUEST_STATE', {});
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isConnected, hasSynced, broadcastMessage]);
+
+  // Sync teams, players, and master state from Broadcast
+  useEffect(() => {
+    if (!channel) return;
+
+    const handleBroadcast = (payload: any) => {
+      const { event, payload: data } = payload;
+      
+      if (event === 'LOBBY_STATE') {
+        setTeams(data.teams || []);
+        setPlayers(data.players || []);
+        setMode(data.mode || 'team');
+        setHasSynced(true);
+      } else if (event === 'GAME_STATE') {
+        setMasterState(data.masterState);
+        setPlayers(data.players || []);
+        if (data.config?.mode) setMode(data.config.mode);
+        setHasSynced(true);
+      } else if (event === 'START_GAME') {
+        // Will receive GAME_STATE shortly
+      } else if (event === 'PLAYER_LEAVE') {
+        setPlayers((prev) => prev.filter(p => p.id !== data.id));
+      } else if (event === 'PLAYER_JOIN') {
+        setPlayers((prev) => {
+          const exists = prev.find(p => p.id === data.id);
+          return exists ? prev.map(p => p.id === data.id ? data : p) : [...prev, data];
+        });
+      } else if (event === 'TEAM_CREATE') {
+        setTeams((prev) => [...prev, data]);
+      }
     };
 
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [roomId, joinedState, myId]);
+    channel.on('broadcast', { event: '*' }, handleBroadcast);
+  }, [channel, roomId]);
 
   const handleJoin = (teamId: string) => {
     if (!name.trim()) return;
     
-    let currentPlayers = [...players];
-    currentPlayers.push({ id: myId, name: name.trim(), teamId });
-    setPlayers(currentPlayers);
-    localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(currentPlayers));
-    
+    const payload = { id: myId, name: name.trim(), teamId };
+    setPlayers((prev) => [...prev, payload]);
+    broadcastMessage('PLAYER_JOIN', payload);
     setJoinedState(teamId);
   };
 
@@ -494,9 +487,8 @@ function PlayJoinContent() {
     const colorIndex = teams.length % TEAM_COLORS.length;
     const newTeam = { id: newTeamId, name: newTeamName.trim(), color: TEAM_COLORS[colorIndex] };
     
-    const updatedTeams = [...teams, newTeam];
-    setTeams(updatedTeams);
-    localStorage.setItem(`wave_room_teams_${roomId}`, JSON.stringify(updatedTeams));
+    setTeams((prev) => [...prev, newTeam]);
+    broadcastMessage('TEAM_CREATE', newTeam);
     
     setIsCreatingTeam(false);
     setNewTeamName('');
@@ -504,15 +496,26 @@ function PlayJoinContent() {
   };
 
   const handleLeave = () => {
-    const p = players.filter((player: any) => player.id !== myId);
-    setPlayers(p);
-    localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(p));
+    setPlayers((prev) => prev.filter((p: any) => p.id !== myId));
+    broadcastMessage('PLAYER_LEAVE', { id: myId });
     setJoinedState('unjoined');
   };
 
   // If game is active AND we are joined, show the controller!
   if (joinedState !== 'unjoined' && masterState && masterState.phase !== 'setup') {
-    return <PlayerGameController roomId={roomId} myId={myId} myTeamId={joinedState} masterState={masterState} players={players} onLeave={handleLeave} />;
+    return <PlayerGameController roomId={roomId} myId={myId} myTeamId={joinedState} masterState={masterState} players={players} onLeave={handleLeave} broadcastMessage={broadcastMessage} />;
+  }
+
+  // If we joined manually and haven't synced with the host yet, wait for the host's LOBBY_STATE
+  if (!hasSynced) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-imperial_blue-500 to-imperial_blue-600">
+        <div className="text-center space-y-4">
+          <div className="animate-spin w-12 h-12 border-4 border-white border-t-bright_ocean-500 rounded-full mx-auto"></div>
+          <p className="text-white font-bold uppercase tracking-widest animate-pulse">Connecting to Room {roomId}...</p>
+        </div>
+      </div>
+    );
   }
 
   // Lobby waiting state
