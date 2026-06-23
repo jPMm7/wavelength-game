@@ -465,11 +465,13 @@ function PlayJoinContent() {
         });
       } else if (event === 'TEAM_CREATE') {
         setTeams((prev) => [...prev, data]);
+      } else if (event === 'ROOM_CLOSED') {
+        router.push('/');
       }
     };
 
     channel.on('broadcast', { event: '*' }, handleBroadcast);
-  }, [channel, roomId]);
+  }, [channel, roomId, router]);
 
   const handleJoin = (teamId: string) => {
     if (!name.trim()) return;

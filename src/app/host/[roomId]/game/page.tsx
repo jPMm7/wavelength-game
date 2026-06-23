@@ -478,6 +478,7 @@ function HostGameContent() {
                   size="xl" 
                   className="w-full md:flex-1 py-6 text-xl md:text-2xl bg-black/20 hover:bg-black/40 text-white border-transparent"
                   onClick={() => {
+                    broadcastMessage('ROOM_CLOSED', {});
                     localStorage.removeItem(`wave_room_state_${roomId}`);
                     localStorage.removeItem(`wave_room_teams_${roomId}`);
                     localStorage.removeItem(`wave_room_${roomId}`);
@@ -629,6 +630,7 @@ function HostGameContent() {
               Cancel
             </Button>
             <Button variant="accent" size="lg" className="flex-1 !bg-red-500 hover:!bg-red-400 !border-red-300 !text-white" onClick={() => {
+              broadcastMessage('ROOM_CLOSED', {});
               localStorage.removeItem(`wave_room_state_${roomId}`);
               localStorage.removeItem(`wave_room_teams_${roomId}`);
               localStorage.removeItem(`wave_room_${roomId}`);

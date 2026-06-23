@@ -165,6 +165,7 @@ function HostLobbyContent() {
           <button 
             type="button"
             onClick={() => {
+              broadcastMessage('ROOM_CLOSED', {});
               localStorage.removeItem(`wave_room_${roomId}`);
               localStorage.removeItem(`wave_room_teams_${roomId}`);
               localStorage.removeItem(`wave_room_config_${roomId}`);
