@@ -291,14 +291,14 @@ function HostGameContent() {
       <div className="flex-1 flex flex-col items-center max-w-4xl mx-auto w-full space-y-4 md:space-y-6 min-h-0">
         
         {/* The Card */}
-        <div className="w-full flex justify-between items-center bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] shrink-0">
-          <div className="text-lg md:text-3xl lg:text-4xl font-black text-imperial_blue-800 uppercase text-center flex-1 break-words leading-tight">
+        <div className="w-full flex justify-between items-center bg-white p-3 md:p-4 rounded-xl md:rounded-2xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0">
+          <div className="text-lg md:text-2xl lg:text-3xl font-black text-imperial_blue-800 uppercase text-center flex-1 break-words leading-tight">
             {store.currentCard.leftConcept}
           </div>
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-bright_ocean-500 rounded-full flex items-center justify-center text-white font-bold text-lg md:text-xl flex-shrink-0 mx-4 border-4 border-white shadow-inner">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-bright_ocean-500 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base flex-shrink-0 mx-3 border-4 border-white shadow-inner">
             VS
           </div>
-          <div className="text-xl md:text-4xl font-black text-imperial_blue-800 uppercase text-center flex-1 break-words">
+          <div className="text-lg md:text-2xl lg:text-3xl font-black text-imperial_blue-800 uppercase text-center flex-1 break-words leading-tight">
             {store.currentCard.rightConcept}
           </div>
         </div>
