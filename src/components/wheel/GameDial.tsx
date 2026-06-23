@@ -95,7 +95,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
 
   return (
     <div 
-      className="relative w-full max-w-2xl mx-auto flex justify-center items-end select-none touch-none"
+      className="relative w-full h-full max-w-2xl mx-auto flex justify-center items-end select-none touch-none min-h-0"
       onPointerDown={(e) => {
         if (interactive) setIsDragging(true);
       }}
@@ -103,7 +103,7 @@ export function GameDial({ targetAngle, guessAngle, shutterOpen, interactive, on
       <svg 
         ref={svgRef}
         viewBox="-10 -10 420 250" 
-        className="w-full h-full max-h-[40vh] md:max-h-[50vh]"
+        className="w-full h-full max-h-full"
       >
         <g className="drop-shadow-[0px_8px_0px_#010f2c]">
           <g className="drop-shadow-2xl">
