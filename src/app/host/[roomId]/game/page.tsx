@@ -369,20 +369,18 @@ function HostGameContent() {
             )}
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
-              <div className="mb-4 md:mb-6 flex flex-col justify-center shrink-0 items-center gap-2">
-                <div className="flex flex-wrap justify-center gap-2">
-                  {(store.mode === 'solo' ? individualGuessesArray : Object.values(store.teamGuesses || {})).map(guess => {
-                    const pts = calculatePoints(store.targetAngle, guess.angle);
-                    return pts > 0 ? (
-                      <div key={guess.id} className="px-4 py-2 bg-frosted_mint-500 border-2 border-frosted_mint-300 rounded-xl shadow-[0_2px_0_0_#010f2c]">
-                        <span className="font-bold text-imperial_blue-800 uppercase">{guess.name}: +{pts}</span>
-                      </div>
-                    ) : null;
-                  })}
-                </div>
+              <div className="mb-2 md:mb-4 flex flex-wrap justify-center shrink-0 items-center gap-2">
+                {(store.mode === 'solo' ? individualGuessesArray : Object.values(store.teamGuesses || {})).map(guess => {
+                  const pts = calculatePoints(store.targetAngle, guess.angle);
+                  return pts > 0 ? (
+                    <div key={guess.id} className="px-3 py-1.5 bg-frosted_mint-500 border-2 border-frosted_mint-300 rounded-xl shadow-[0_2px_0_0_#010f2c]">
+                      <span className="font-bold text-imperial_blue-800 uppercase text-sm md:text-base">{guess.name}: +{pts}</span>
+                    </div>
+                  ) : null;
+                })}
                 {store.mode === 'team' && Object.values(store.teamGuesses || {}).some((g: any) => calculatePoints(store.targetAngle, g.angle) > 0) && (
-                  <div className="px-4 py-2 bg-bright_ocean-500 border-2 border-bright_ocean-300 rounded-xl shadow-[0_2px_0_0_#010f2c] mt-2">
-                    <span className="font-bold text-white uppercase">{store.teams.find(t => t.id === store.currentTeamId)?.name} (Psychic): +{Object.values(store.teamGuesses || {}).filter((g: any) => calculatePoints(store.targetAngle, g.angle) > 0).length}</span>
+                  <div className="px-3 py-1.5 bg-bright_ocean-500 border-2 border-bright_ocean-300 rounded-xl shadow-[0_2px_0_0_#010f2c]">
+                    <span className="font-bold text-white uppercase text-sm md:text-base">{store.teams.find(t => t.id === store.currentTeamId)?.name} (Psychic): +{Object.values(store.teamGuesses || {}).filter((g: any) => calculatePoints(store.targetAngle, g.angle) > 0).length}</span>
                   </div>
                 )}
               </div>

@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useRoomSync } from '@/hooks/useRoomSync';
 import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/Button';
-import { Users, UserPlus, Play, ArrowLeft, X, Copy, Check } from 'lucide-react';
+import { Users, Play, ArrowLeft, X, Copy, Check } from 'lucide-react';
 
 interface MockPlayer {
   id: string;
@@ -19,7 +19,7 @@ interface MockTeam {
   color: string;
 }
 
-const MOCK_NAMES = ['Alex', 'Sam', 'Jordan', 'Taylor', 'Casey', 'Riley'];
+
 
 const DEFAULT_TEAMS: MockTeam[] = [
   { id: 'team1', name: 'Pugs', color: 'bg-bright_ocean-500 border-bright_ocean-300' },
@@ -134,13 +134,6 @@ function HostLobbyContent() {
     localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(newPlayers));
   };
 
-  const simulateJoin = () => {
-    if (players.length >= 16) return;
-    const randomName = MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
-    const randomTeam = mode === 'solo' ? 'solo' : (teams.length > 0 ? teams[Math.floor(Math.random() * teams.length)].id : 'coop');
-    updatePlayers([...players, { id: Math.random().toString(), name: `${randomName} ${players.length + 1}`, teamId: randomTeam }]);
-  };
-
   const kickPlayer = (id: string) => {
     updatePlayers(players.filter(p => p.id !== id));
   };
@@ -225,14 +218,7 @@ function HostLobbyContent() {
               Players ({players.length})
             </h2>
             
-            {/* MOCK CONTROL */}
-            <button 
-              onClick={simulateJoin}
-              className="px-4 py-2 bg-imperial_blue-200 text-white font-bold rounded-xl hover:bg-imperial_blue-300 transition-colors flex items-center gap-2"
-            >
-              <UserPlus className="w-5 h-5" />
-              Simulate Join
-            </button>
+
           </div>
 
           <div className="flex-1 bg-imperial_blue-500/50 rounded-2xl p-6 min-h-[400px] mb-8 overflow-y-auto">
