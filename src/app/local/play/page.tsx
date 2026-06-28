@@ -65,7 +65,7 @@ export default function LocalPlay() {
     addScore(currentTeamId!, points);
     
     // Check if team won
-    if ((currentTeam?.score || 0) + points >= targetScore) {
+    if (targetScore > 0 && (currentTeam?.score || 0) + points >= targetScore) {
       useGameStore.getState().setGameOver(currentTeamId!);
       return;
     }
@@ -89,7 +89,7 @@ export default function LocalPlay() {
         </div>
         <div className="flex items-center gap-6">
           <div className="text-bright_ocean-500 font-bold uppercase tracking-widest hidden md:block">
-            Playing to {targetScore}
+            Playing to {targetScore > 0 ? targetScore : '∞'}
           </div>
           <button 
             onClick={() => setIsEndGameModalOpen(true)}

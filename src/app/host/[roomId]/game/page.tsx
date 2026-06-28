@@ -215,7 +215,7 @@ function HostGameContent() {
   const handleAdjustScore = (teamId: string, delta: number) => {
     store.addScore(teamId, delta);
     const team = store.teams.find(t => t.id === teamId);
-    if (team && (team.score + delta) >= store.targetScore) {
+    if (team && store.targetScore > 0 && (team.score + delta) >= store.targetScore) {
       store.setGameOver(teamId);
     }
   };
@@ -237,12 +237,14 @@ function HostGameContent() {
     let maxScore = -1;
 
     // Find the winner
-    store.teams.forEach(t => {
-      if (t.score >= store.targetScore && t.score > maxScore) {
-        highestScoreTeamId = t.id;
-        maxScore = t.score;
-      }
-    });
+    if (store.targetScore > 0) {
+      store.teams.forEach(t => {
+        if (t.score >= store.targetScore && t.score > maxScore) {
+          highestScoreTeamId = t.id;
+          maxScore = t.score;
+        }
+      });
+    }
     
     if (highestScoreTeamId) {
       store.setGameOver(highestScoreTeamId);
@@ -270,7 +272,7 @@ function HostGameContent() {
         </div>
         <div className="flex items-center gap-6">
           <div className="text-bright_ocean-500 font-bold uppercase tracking-widest hidden md:block">
-            Playing to {store.targetScore}
+            Playing to {store.targetScore > 0 ? store.targetScore : '∞'}
           </div>
           <button 
             onClick={() => setIsControlPanelOpen(true)}

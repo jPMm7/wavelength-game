@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wavelength Online Web Application
 
-## Getting Started
+Wavelength is a social party game of telepathy, empathy, and perspective. It prioritizes communication, debate, and laughter over complex strategy. This project is a fully playable, interactive digital version of Wavelength built for modern browsers.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🎮 Game Modes
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 1. Host a Party (Kahoot-Style / Multi-Device)
+Designed for social settings with one central "Host Screen" (TV/laptop) and player smartphones as controllers.
+* **Lobby & Room System:** Host screen displays a unique Room Code and QR Code.
+* **Frictionless Entry:** Scan QR or enter URL/code to join, choose a username, and pick a team.
+* **Real-time Synchronization:** Game state syncs in real-time between the phone controllers and the central TV screen.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Pass & Play (Local / Same Device)
+Designed for groups sharing a single physical device.
+* **Single-Screen Layout:** UI adapts to show/hide sensitive info.
+* **Privacy Guard:** Prompts players to pass the device to the Psychic while others look away.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🛠️ Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+* **Framework:** [Next.js](https://nextjs.org/) (App Router, React 19)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **State Management:** [Zustand](https://github.com/pmndrs/zustand)
+* **Database & Realtime Sync:** [Supabase](https://supabase.com/)
+* **Animations:** [Framer Motion](https://www.framer.com/motion/)
+* **Icons:** [Lucide React](https://lucide.dev/)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Getting Started
 
-## Deploy on Vercel
+### Prerequisites
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+* Node.js (v18 or higher recommended)
+* npm, yarn, pnpm, or bun
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Installation
+
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   cd wavelength-game
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   Create a `.env.local` file in the root of the project with your Supabase credentials:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to view the game.
