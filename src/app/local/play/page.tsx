@@ -201,10 +201,12 @@ export default function LocalPlay() {
 
         {phase === 'guess' && (
           <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            {clue !== 'Spoken Aloud' && (
             <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
               <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Is:</h2>
               <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{clue}"</p>
             </div>
+            )}
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
               <h2 className="text-xl md:text-2xl font-bold text-cream-500 mb-4 md:mb-6 uppercase tracking-widest text-center shrink-0">
@@ -234,10 +236,12 @@ export default function LocalPlay() {
 
         {phase === 'reveal' && (
           <div className="w-full flex-1 flex flex-col min-h-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            {clue !== 'Spoken Aloud' && (
             <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border-4 md:border-8 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] text-center shrink-0">
               <h2 className="text-sm md:text-lg font-bold text-bright_ocean-500 uppercase tracking-widest mb-1 md:mb-2">The Clue Was:</h2>
               <p className="text-3xl md:text-5xl font-black text-imperial_blue-800 uppercase leading-tight">"{clue}"</p>
             </div>
+            )}
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
               <div className="mb-4 md:mb-6 flex justify-center shrink-0">

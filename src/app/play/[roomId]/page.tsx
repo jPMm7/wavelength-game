@@ -248,10 +248,12 @@ function PlayerGameController({ roomId, myId, myTeamId, masterState, players, on
 
         return (
           <div className="flex-1 flex flex-col min-h-0 space-y-4">
+            {masterState.clue !== 'Spoken Aloud' && (
             <div className="bg-white p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] shrink-0 text-center">
               <h2 className="text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">The Clue Is:</h2>
               <p className="text-3xl font-black text-imperial_blue-800 uppercase leading-tight">"{masterState.clue}"</p>
             </div>
+            )}
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] flex flex-col">
               <h2 className="text-sm font-bold text-cream-500 uppercase tracking-widest text-center mb-2 shrink-0">Secret Initial Guess</h2>
@@ -465,6 +467,8 @@ function PlayJoinContent() {
         });
       } else if (event === 'TEAM_CREATE') {
         setTeams((prev) => [...prev, data]);
+      } else if (event === 'RETURN_TO_LOBBY') {
+        setMasterState(null);
       } else if (event === 'ROOM_CLOSED') {
         router.push('/');
       }

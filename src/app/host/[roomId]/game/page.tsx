@@ -113,13 +113,45 @@ function HostGameContent() {
       } else if (event === 'SUBMIT_TEAM_GUESS' && currentState.phase === 'guess_debate') {
         currentState.submitTeamGuess(data);
       } else if (event === 'PLAYER_JOIN') {
-        // Technically shouldn't happen during game, but just in case
+        // Handle mid-game joins
         setPlayers((prev) => {
           const exists = prev.find(p => p.id === data.id);
           const newPlayers = exists ? prev.map(p => p.id === data.id ? data : p) : [...prev, data];
           localStorage.setItem(`wave_room_${roomId}`, JSON.stringify(newPlayers));
+
+          // Defer syncTeams to avoid updating Zustand state during a React state update
+          if (currentState.mode === 'solo' && !exists) {
+            setTimeout(() => {
+              const soloTeams = newPlayers.map((p, i) => ({
+                id: p.id,
+                name: p.name,
+                color: [
+                  'bg-bright_ocean-500 border-bright_ocean-300',
+                  'bg-imperial_blue-500 border-imperial_blue-300',
+                  'bg-frosted_mint-500 border-frosted_mint-300',
+                  'bg-red-500 border-red-300',
+                  'bg-yellow-500 border-yellow-300',
+                  'bg-purple-500 border-purple-300'
+                ][i % 6]
+              }));
+              currentState.syncTeams(soloTeams);
+            }, 0);
+          }
           return newPlayers;
         });
+      } else if (event === 'TEAM_CREATE') {
+        // Handle mid-game team creation in Team mode
+        setTimeout(() => {
+          const freshState = useGameStore.getState();
+          const existingTeam = freshState.teams.find((t: any) => t.id === data.id);
+          if (!existingTeam) {
+            const newTeam = { ...data, score: 0, psychicIndex: 0 };
+            const updatedTeams = [...freshState.teams, newTeam];
+            freshState.syncTeams(updatedTeams);
+            // Persist so the Lobby page sees the new team on "Play Again"
+            localStorage.setItem(`wave_room_teams_${roomId}`, JSON.stringify(updatedTeams));
+          }
+        }, 0);
       } else if (event === 'PLAYER_LEAVE') {
         setPlayers((prev) => {
           const newPlayers = prev.filter(p => p.id !== data.id);
@@ -214,9 +246,10 @@ function HostGameContent() {
 
   const handleAdjustScore = (teamId: string, delta: number) => {
     store.addScore(teamId, delta);
-    const team = store.teams.find(t => t.id === teamId);
-    if (team && store.targetScore > 0 && (team.score + delta) >= store.targetScore) {
-      store.setGameOver(teamId);
+    const freshState = useGameStore.getState();
+    const team = freshState.teams.find(t => t.id === teamId);
+    if (team && freshState.targetScore > 0 && team.score >= freshState.targetScore) {
+      freshState.setGameOver(teamId);
     }
   };
 
@@ -328,10 +361,12 @@ function HostGameContent() {
         {/* Phase: Reveal */}
         {store.phase === 'reveal' && (
           <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 md:space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            {store.clue !== 'Spoken Aloud' && (
             <div className="bg-white p-3 md:p-4 rounded-xl md:rounded-2xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] text-center shrink-0">
               <h2 className="text-xs md:text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">The Clue Was:</h2>
               <p className="text-2xl md:text-4xl font-black text-imperial_blue-800 uppercase leading-tight">"{store.clue}"</p>
             </div>
+            )}
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col">
               <div className="mb-4 md:mb-6 flex flex-col justify-center shrink-0 items-center gap-2">
@@ -377,10 +412,12 @@ function HostGameContent() {
         {/* Phase: Guess Blind (Individual Secret Guesses) */}
         {store.phase === 'guess_blind' && (
           <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 md:space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            {store.clue !== 'Spoken Aloud' && (
             <div className="bg-white p-3 md:p-4 rounded-xl md:rounded-2xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] text-center shrink-0">
               <h2 className="text-xs md:text-sm font-bold text-bright_ocean-500 uppercase tracking-widest mb-1">The Clue Is:</h2>
               <p className="text-2xl md:text-4xl font-black text-imperial_blue-800 uppercase leading-tight">"{store.clue}"</p>
             </div>
+            )}
 
             <div className="flex-1 min-h-0 bg-imperial_blue-400 p-4 md:p-8 rounded-2xl md:rounded-3xl border-4 border-imperial_blue-300 shadow-[4px_4px_0px_0px_#010f2c] md:shadow-[8px_8px_0px_0px_#010f2c] flex flex-col items-center justify-center">
               <Users className="w-24 h-24 text-bright_ocean-500 mb-6 drop-shadow-[0_4px_0_rgba(0,0,0,0.3)] animate-pulse" />
@@ -468,6 +505,7 @@ function HostGameContent() {
                   className="w-full md:flex-1 py-6 text-xl md:text-2xl"
                   onClick={() => {
                     const currentMode = store.mode;
+                    broadcastMessage('RETURN_TO_LOBBY', {});
                     localStorage.removeItem(`wave_room_state_${roomId}`);
                     store.resetGame();
                     router.push(`/host/${roomId}?mode=${currentMode}`);
@@ -526,6 +564,7 @@ function HostGameContent() {
               <button 
                 onClick={() => {
                   const currentMode = store.mode;
+                  broadcastMessage('RETURN_TO_LOBBY', {});
                   localStorage.removeItem(`wave_room_state_${roomId}`);
                   store.resetGame();
                   router.push(`/host/${roomId}?mode=${currentMode}`);
